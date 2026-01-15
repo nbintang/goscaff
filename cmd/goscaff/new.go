@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"scaffgo-cli/internal/scaffold"
+	"github.com/nbintang/goscaff-cli/internal/scaffold"
 
 	"github.com/spf13/cobra"
 )
