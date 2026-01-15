@@ -7,7 +7,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "goarch",
+	Use:   "goscaff",
 	Short: "Generate a Go Fiber Boilerplate",
 }
 
