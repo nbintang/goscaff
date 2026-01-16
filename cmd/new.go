@@ -81,10 +81,10 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 
 	newCmd.Flags().StringVar(&flagModule, "module", "", "Go module path (default: project-name)")
-	newCmd.Flags().StringVar(&flagPreset, "preset", "full", "Template preset: base|full")
+	newCmd.Flags().StringVar(&flagPreset, "preset", "base", "Template preset: base|full")
 	newCmd.Flags().StringVar(&flagDB, "db", "postgres", "Database driver: postgres|mysql")
 
 	// bikin output help lebih rapi
-	_ = newCmd.MarkFlagRequired("module") // kalau memang kamu ingin wajib
+	// _ = newCmd.MarkFlagRequired("module") // kalau memang kamu ingin wajib
 	// Kalau kamu tidak mau wajib, hapus baris di atas.
 }

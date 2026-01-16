@@ -36,8 +36,8 @@ Tips:
 }
 
 func Execute() {
+	enableColoredHelp(rootCmd)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-
 }
