@@ -1,37 +1,38 @@
 # goscaff
 
-**Instant Go project scaffolding.**
+**Instant Go project scaffolding CLI.**
 
-`goscaff` is an instant Go scaffolding CLI that helps you generate production-ready Go backend projects in seconds — without boilerplate fatigue.
+`goscaff` is a lightweight Go CLI tool that scaffolds clean, production-ready Go backend projects in seconds—without boilerplate fatigue or framework lock-in.
 
 ---
 
 ## ✨ Features
 
-* ⚡ **Instant project setup** — one command to get started
-* 🧱 **Scaffolding presets** (`base`, `full`)
-* 🔁 **Flexible architecture** — no forced DI or framework lock-in
-* 📦 **Go modules ready** (`go.mod` generated)
-* 🧰 **Git initialized** automatically
-* 🧪 **Production-oriented structure** (`cmd/`, `internal/`, `pkg/`)
+* ⚡ **Instant setup** — create a new Go project with one command
+* 🧱 **Presets** — `base` (minimal) and `full` (production-ready)
+* 🧩 **Flexible architecture** — no forced DI or framework coupling
+* 📦 **Go modules ready** — `go.mod` generated automatically
+* 🧰 **Git initialized** — repository ready out of the box
+* 🌱 **Environment files included** — `.env`, `.env.example`, `.env.local`
+* 🎨 **Clean CLI output** — readable, colored progress & next-steps
 
 ---
 
 ## 📦 Installation
 
-### Using Go (recommended)
+### Using Go
 
 ```bash
 go install github.com/nbintang/goscaff@latest
 ```
 
-Make sure `$GOPATH/bin` (or `$HOME/go/bin`) is in your `PATH`.
+Ensure `$GOPATH/bin` or `$HOME/go/bin` is in your `PATH`.
 
 ---
 
 ## 🚀 Usage
 
-### Create a new project
+### Create a new project (default: base preset)
 
 ```bash
 goscaff new myapp
@@ -40,10 +41,11 @@ goscaff new myapp
 This will:
 
 * Create a `myapp` directory
-* Scaffold a clean Go project structure
+* Scaffold the **base** project structure
 * Generate `go.mod`
 * Run `go mod tidy`
 * Initialize a git repository
+* Print clear **next steps** to run the project
 
 ---
 
@@ -53,14 +55,24 @@ This will:
 goscaff new myapp --module github.com/username/myapp
 ```
 
-If `--module` is not provided, the module name defaults to the project name.
+If `--module` is omitted, the module name defaults to the project name.
 
 ---
 
-### Choose database
+### Use full preset
 
 ```bash
-goscaff new myapp --db mysql
+goscaff new myapp --preset full
+```
+
+The `full` preset includes additional infrastructure and production-oriented defaults.
+
+---
+
+### Choose database (full preset only)
+
+```bash
+goscaff new myapp --preset full --db mysql
 ```
 
 Supported databases:
@@ -68,28 +80,39 @@ Supported databases:
 * `postgres` (default)
 * `mysql`
 
+> Database overlays are applied **only** for the `full` preset. The `base` preset stays minimal.
+
 ---
 
-## 📂 Project Structure
+## 📂 Example Project Structure
 
-```
+```text
 myapp/
 ├── cmd/
-│   ├── api/
-│   ├── migrate/
-│   └── seed/
+│   └── api/
+│   │   └── main.go
+│   └── migrate
+│   │   └── main.go
+│   └── ...
+│       
 ├── internal/
-│   ├── user/
 │   ├── auth/
+│   ├── apperr/
 │   ├── infra/
-│   └── http/
+│   │   ├── database/
+│   │   ├── cache/
+│   │   └── ...
+│   ├── http/
+│   └── ...
+│
 ├── pkg/
-│   └── utils/
-├── scripts/
-│   ├── migrate.sh
-│   └── seed.sh
+│   ├── env/
+│   ├── slice/
+│   └── ...
+├── .env
+├── .env.example
+├── .env.local
 ├── go.mod
-├── go.sum
 └── README.md
 ```
 
@@ -97,20 +120,20 @@ myapp/
 
 ## 🧭 Philosophy
 
-`goscaff` is built with these principles in mind:
+`goscaff` is designed with a few simple principles:
 
-* **Instant, not complex** — reduce setup time, not add layers
-* **Practical over opinionated** — structure is provided, decisions stay with you
-* **Scalable by default** — simple to start, easy to extend
+* **Minimal by default** — start clean, add complexity only when needed
+* **Fast feedback** — scaffolding should take seconds, not minutes
+* **Structure without lock-in** — you own the architecture decisions
 
 ---
 
 ## 🛣️ Roadmap
 
 * [ ] Interactive prompts (`goscaff new`)
-* [ ] Preset selection (`base`, `full`)
+* [ ] Preset selection wizard
 * [ ] Custom template support
-* [ ] Binary releases (Windows / macOS / Linux)
+* [ ] Prebuilt binaries (Windows / macOS / Linux)
 
 ---
 
@@ -119,7 +142,7 @@ myapp/
 Contributions are welcome!
 
 1. Fork the repository
-2. Create a new branch
+2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
 
@@ -134,4 +157,5 @@ MIT License
 ## ⭐ Acknowledgements
 
 * [Cobra](https://github.com/spf13/cobra) — CLI framework
-* Go community for inspiring great tooling
+* [fatih/color](https://github.com/fatih/color) — terminal coloring
+* Go community for inspiring great too
