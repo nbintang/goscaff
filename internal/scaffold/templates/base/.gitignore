@@ -2,9 +2,8 @@
 # Environment files
 # =====================
 .env
+.env.*
 # delete this env local if you need to unpublic
-.env.local
-.env.*.local
 
 # =====================
 # Go build artifacts

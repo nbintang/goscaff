@@ -4,11 +4,20 @@ import (
 	"os"
 	"os/exec"
 )
-
-func run(dir string, name string, args ...string) error {
+ 
+func runVerbose(dir string, name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func runQuiet(dir string, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	// discard output biar bersih
+	cmd.Stdout = nil
+	cmd.Stderr = nil
 	return cmd.Run()
 }

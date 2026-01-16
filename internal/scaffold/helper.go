@@ -1,66 +1,60 @@
 package scaffold
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
-	"text/template"
 )
 
-func renderDir(srcRoot, outRoot string, opts Options) error {
-	entries, err := templateFS.ReadDir(srcRoot)
-	if err != nil {
-		return err
+func printNextSteps(outDir string, opts Options) {
+	fmt.Println()
+
+	// Status line
+	cOk.Printf("✓ ")
+	cOk.Println("Project generated successfully")
+
+	cTip.Print("⚑ ")
+	cTip.Println("Tip: review your .env values before running")
+
+	fmt.Println()
+	cHeader.Println("Next steps")
+	cBullet.Println("────────────────────────────────────────")
+
+	// Normalize outDir biar ga tampil "./myapp"
+	projectDir := filepath.Base(filepath.Clean(outDir))
+
+	// Step 1
+	printStep("Go to project directory",
+		fmt.Sprintf("cd %s", projectDir),
+	)
+
+	// Step 2
+	printStep("Setup environment",
+		"cp .env.example .env",
+	)
+
+	// Full preset extras
+	if opts.Preset == "full" {
+		printStep("Start dependencies (optional)",
+			"docker compose up -d",
+		)
 	}
 
-	for _, e := range entries {
-		srcPath := filepath.ToSlash(filepath.Join(srcRoot, e.Name()))
-		outPath := filepath.Join(outRoot, e.Name())
+	// Run
+	printStep("Run the app",
+		"go run ./cmd/api",
+	)
 
-		if e.IsDir() {
-			if err := os.MkdirAll(outPath, 0o755); err != nil {
-				return err
-			}
-			if err := renderDir(srcPath, outPath, opts); err != nil {
-				return err
-			}
-			continue
-		}
+	fmt.Println()
+	cNote.Println("  • Server: http://localhost:8080")
+	cNote.Println("  • If you changed ports, check .env")
+	fmt.Println()
+}
 
-		if strings.HasSuffix(e.Name(), ".tmpl") {
-			outPath = strings.TrimSuffix(outPath, ".tmpl")
-			b, err := templateFS.ReadFile(srcPath)
-			if err != nil {
-				return err
-			}
-			t, err := template.New(e.Name()).Parse(string(b))
-			if err != nil {
-				return fmt.Errorf("parse template %s: %w", srcPath, err)
-			}
-			var buf bytes.Buffer
-			if err := t.Execute(&buf, map[string]any{
-				"PROJECT_NAME": opts.ProjectName,
-				"MODULE_PATH":  opts.ModulePath,
-				"DB":           opts.DB,
-			}); err != nil {
-				return fmt.Errorf("execute template %s: %w", srcPath, err)
-			}
-			if err := os.WriteFile(outPath, buf.Bytes(), 0o644); err != nil {
-				return err
-			}
-			continue
-		}
-
-		b, err := templateFS.ReadFile(srcPath)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(outPath, b, 0o644); err != nil {
-			return err
-		}
+func printStep(title string, commands ...string) {
+	fmt.Println()
+	cStepTitle.Printf("  %s\n", title)
+	for _, c := range commands {
+		cBullet.Print("    $ ")
+		cCmd.Println(c)
 	}
-
-	return nil
 }
