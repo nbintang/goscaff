@@ -2,7 +2,7 @@
 
 **Instant Go project scaffolding.**
 
-`goscaff` is an instant Go scaffolding CLI that helps you generate production-ready Go backend projects in seconds — without boilerplate fatigue.
+`goscaff` is an instant Go scaffolding CLI that helps you generate production-ready Go backend projects in seconds without boilerplate fatigue.
 
 ---
 
