@@ -44,8 +44,8 @@ type scaffoldImpl struct {
 	renderer   Renderer
 }
 type Overlay struct {
-	Src string // file template path
-	Dst string // output file path
+	Src string  
+	Dst string 
 }
 
 func buildDbOverlayFiles(dbRoot string, db DBType) []Overlay {
@@ -57,8 +57,7 @@ func buildDbOverlayFiles(dbRoot string, db DBType) []Overlay {
 		{Src: dbRoot + "/migrate.go.tmpl", Dst: "cmd/migrate/init.go"},
 		{Src: dbRoot + "/seed.go.tmpl", Dst: "cmd/seed/init.go"},
 	}
-
-	// Postgres-only helper (MySQL doesn't have CREATE TYPE enums).
+ 
 	if db == DBTypePostgres {
 		files = append(files, Overlay{
 			Src: dbRoot + "/create_enums.go.tmpl",
@@ -70,9 +69,8 @@ func buildDbOverlayFiles(dbRoot string, db DBType) []Overlay {
 }
 
 
-
-// Keep env templates separate from db overlays to avoid confusion.
-func envTemplatePath(db DBType, preset PresetType) string {
+ 
+func (s *scaffoldImpl)  envTemplatePath(db DBType, preset PresetType) string {
 	base := "templates/utils/env"
 
 	switch preset {
@@ -83,7 +81,7 @@ func envTemplatePath(db DBType, preset PresetType) string {
 		default:
 			return base + "/full/postgres.env.example.tmpl"
 		}
-	default: // PresetBase
+	default:  
 		switch db {
 		case DBTypeMySQL:
 			return base + "/base/mysql.env.example.tmpl"
@@ -110,14 +108,12 @@ func NewScaffold(opts ScaffoldOptions, renderer Renderer) Scaffold {
 	}
 } 
 
-func (s *scaffoldImpl) Generate() error {
-	// Preset source
+func (s *scaffoldImpl) Generate() error { 
 	presetRoot := "templates/base"
 	if s.opts.Preset == PresetFull {
 		presetRoot = "templates/full"
 	}
-
-	// DB source
+  
 	dbRoot := "templates/utils/db/postgres"
 	if s.opts.DB == DBTypeMySQL {
 		dbRoot = "templates/utils/db/mysql"
@@ -135,26 +131,23 @@ func (s *scaffoldImpl) Generate() error {
 		return err
 	}
 	pkg.Success("Directory created")
-
-	// 1) Render preset to project root
+ 
 	pkg.Action("Rendering preset (" + string(s.opts.Preset) + ")")
 	if err := s.renderer.RenderDir(presetRoot, s.opts); err != nil {
 		return err
 	}
 	pkg.Success("Preset rendered")
-
-	// 2) Always generate .env.example (base/full)
+ 
 	pkg.Action("Generating environment template")
 	if err := s.renderer.RenderFileTo(
-		envTemplatePath(s.opts.DB, s.opts.Preset),
+		s.envTemplatePath(s.opts.DB, s.opts.Preset),
 		".env.example",
 		s.opts,
 	); err != nil {
 		return err
 	}
 	pkg.Success(".env.example generated")
-
-	// 3) Apply DB overlays ONLY for full preset
+ 
 	if s.opts.Preset == PresetFull {
 		pkg.Action("Applying database overlays (" + string(s.opts.DB) + ")")
 		if err := s.applyOverlayFiles(buildDbOverlayFiles(dbRoot, s.opts.DB)); err != nil {
