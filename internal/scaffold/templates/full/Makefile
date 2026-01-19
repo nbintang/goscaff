@@ -4,6 +4,13 @@ ENV_FILE := .env.local
 APP_NAME := app
 BUILD_DIR := bin
 
+
+COUNT ?=
+SEED_ARGS :=
+ifneq ($(strip $(COUNT)),)
+  SEED_ARGS += --count=$(COUNT)
+endif
+
 ifeq ($(OS),Windows_NT)
 SHELL := powershell.exe
 .SHELLFLAGS := -NoProfile -ExecutionPolicy Bypass -Command
@@ -30,7 +37,8 @@ migrate-reset:
 	@$(LOAD_ENV) go run ./cmd/migrate --reset
 
 seed:
-	@$(LOAD_ENV) go run ./cmd/seed
+
+	@$(LOAD_ENV) go run ./cmd/seed $(SEED_ARGS)
 
 build:
 	@echo "🔨 Building binary..."

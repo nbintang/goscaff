@@ -1,8 +1,7 @@
 package main
 
 import (
-	"context"
-	"flag"
+	"context" 
 	"{{.MODULE_PATH}}/config"
 	"{{.MODULE_PATH}}/internal/infra/database"
 	"{{.MODULE_PATH}}/internal/user"
@@ -20,9 +19,7 @@ var CreateRoleEnum = CreateEnums(EnumOptions{
 	Values: ROLE,
 })
 
-func InitMigrate(ctx context.Context) error {
-	reset := flag.Bool("reset", false, "Drop all tables then migrate")
-	flag.Parse()
+func InitMigrate(ctx context.Context, reset *bool) error {
 	dbLogger := database.NewLogger()
 	env, err := config.NewEnvs()
 	if err != nil {

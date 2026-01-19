@@ -1,18 +1,19 @@
-package main
+package tamplater
 
-import ( 
-	"bytes"
+import (
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/nbintang/goscaff/tools"
 )
 
 //
 //
 // go run . <template-folder> <old-module>
-// 
+//
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("Usage:")
@@ -38,7 +39,7 @@ func main() {
 			return nil
 		}
 
-		return replaceModule(path, oldModule)
+		return tools.ReplaceModule(path, oldModule)
 	})
 
 	if err != nil {
@@ -47,22 +48,4 @@ func main() {
 	}
 
 	fmt.Println("Done replacing module with {{.MODULE_PATH}}")
-}
-
-func replaceModule(path, old string) error {
-	input, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	if !bytes.Contains(input, []byte(old)) {
-		return nil
-	}
-
-	output := bytes.ReplaceAll(input, []byte(old), []byte("{{.MODULE_PATH}}"))
-
-	info := "updated: " + path
-	fmt.Println(info)
-
-	return os.WriteFile(path, output, 0o644)
 }

@@ -1,18 +1,16 @@
 package main
 
 import (
-	"context"
-	"flag"
+	"context" 
 	"{{.MODULE_PATH}}/config"
 	"{{.MODULE_PATH}}/internal/infra/database"
 	"{{.MODULE_PATH}}/internal/user"
 
 	"github.com/sirupsen/logrus"
 )
-
-func InitMigrate(ctx context.Context) error {
-	reset := flag.Bool("reset", false, "Drop all tables then migrate")
-	flag.Parse()
+ 
+ 
+func InitMigrate(ctx context.Context, reset *bool) error {
 	dbLogger := database.NewLogger()
 	env, err := config.NewEnvs()
 	if err != nil {
@@ -22,6 +20,7 @@ func InitMigrate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+ 
 	if *reset {
 		logrus.Println("Resetting database (dropping all tables)...")
 		if err := database.Reset(db); err != nil {

@@ -1,0 +1,66 @@
+package main
+
+import (
+	"fmt"
+	"math/rand"
+	"{{ .MODULE_PATH }}/internal/enums"
+	"{{ .MODULE_PATH }}/internal/user"
+	"{{ .MODULE_PATH }}/pkg/password"
+
+	"strings"
+
+	"github.com/go-faker/faker/v4"
+	"github.com/gosimple/slug"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+type Options struct {
+	Count int
+}
+
+
+
+func InitSeeds(db *gorm.DB, opt Options) error {
+	domain := strings.TrimPrefix("example.com", "@")
+
+	if err := db.Exec("TRUNCATE TABLE users").Error; err != nil {
+		return err
+	}
+
+	hashed, err := password.Hash("Password123")
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < opt.Count; i++ {
+		name := faker.Name()
+
+		role := enums.Admin
+		if i%2 == 0 {
+			role = enums.Member
+		}
+
+		u := user.User{
+			Name:            name,
+			Email:           fmt.Sprintf("%s.%d@%s", slug.Make(name), i+1, domain),
+			AvatarURL:       fmt.Sprintf("https://ui-avatars.com/api/?name=%s&background=random", strings.ReplaceAll(name, " ", "+")),
+			Password:        hashed,
+			Role:            role,
+			IsEmailVerified: rand.Intn(2) == 1,
+		}
+
+		if err := db.Clauses(clause.OnConflict{
+    		Columns: []clause.Column{
+                {Name: "email"},
+            },
+			DoNothing: true,
+		}).Create(&u).Error; err != nil {
+			return fmt.Errorf("create user failed (%s): %w", name, err)
+		}
+	}
+
+	fmt.Println("Seeds initialized successfully")
+
+	return nil
+}
