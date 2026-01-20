@@ -8,27 +8,10 @@ import (
 	"github.com/nbintang/goscaff/pkg"
 )
 
-//go:embed all:templates/**
-var templateFS embed.FS
 
 type Scaffold interface {
 	Generate() error
 }
-
-
-type DBType string
-
-const (
-	DBTypePostgres DBType = "postgres"
-	DBTypeMySQL    DBType = "mysql"
-)
-
-type PresetType string
-
-const (
-	PresetBase   PresetType = "base"
-	PresetFull   PresetType = "full"
-)
 
 type ScaffoldOptions struct {
 	ProjectName string
@@ -38,37 +21,12 @@ type ScaffoldOptions struct {
 	OutDir      string
 }
 
+
 type scaffoldImpl struct {
 	templateFS embed.FS
 	opts       ScaffoldOptions
 	renderer   Renderer
 }
-type Overlay struct {
-	Src string  
-	Dst string 
-}
-
-func buildDbOverlayFiles(dbRoot string, db DBType) []Overlay {
-	files := []Overlay{
-		{Src: dbRoot + "/entity.go.tmpl", Dst: "internal/user/entity.go"},
-		{Src: dbRoot + "/repository.go.tmpl", Dst: "internal/user/repository.go"},
-		{Src: dbRoot + "/standalone.go.tmpl", Dst: "internal/infra/database/standalone.go"},
-
-		{Src: dbRoot + "/migrate.go.tmpl", Dst: "cmd/migrate/init.go"},
-		{Src: dbRoot + "/seed.go.tmpl", Dst: "cmd/seed/init.go"},
-	}
- 
-	if db == DBTypePostgres {
-		files = append(files, Overlay{
-			Src: dbRoot + "/create_enums.go.tmpl",
-			Dst: "cmd/migrate/create_enums.go",
-		})
-	}
-
-	return files
-}
-
-
  
 func (s *scaffoldImpl)  envTemplatePath(db DBType, preset PresetType) string {
 	base := "templates/utils/env"
@@ -92,14 +50,6 @@ func (s *scaffoldImpl)  envTemplatePath(db DBType, preset PresetType) string {
 }
 
 
-func (s *scaffoldImpl) applyOverlayFiles(files []Overlay) error {
-	for _, f := range files {
-		if err := s.renderer.RenderFileTo(f.Src, f.Dst, s.opts); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 func NewScaffold(opts ScaffoldOptions, renderer Renderer) Scaffold {
 	return &scaffoldImpl{
 		templateFS: templateFS,
@@ -150,7 +100,8 @@ func (s *scaffoldImpl) Generate() error {
  
 	if s.opts.Preset == PresetFull {
 		pkg.Action("Applying database overlays (" + string(s.opts.DB) + ")")
-		if err := s.applyOverlayFiles(buildDbOverlayFiles(dbRoot, s.opts.DB)); err != nil {
+		overlays := buildDbOverlayFiles(dbRoot, s.opts.DB)
+		if err := applyOverlayFiles(overlays, s.renderer, s.opts); err != nil {
 			return err
 		}
 		pkg.Success("Database applied")
@@ -160,13 +111,13 @@ func (s *scaffoldImpl) Generate() error {
 	}
 
 	pkg.Action("Running: go mod tidy")
-	if err := runVerbose(s.opts.OutDir, "go", "mod", "tidy"); err != nil {
+	if err := pkg.RunVerbose(s.opts.OutDir, "go", "mod", "tidy"); err != nil {
 		return err
 	}
 	pkg.Success("Dependencies installed")
 
 	pkg.Action("Initializing git repository")
-	_ = runQuiet(s.opts.OutDir, "git", "init")
+	_ = pkg.RunQuiet(s.opts.OutDir, "git", "init")
 	pkg.Success("Git initialized")
 
 	return nil
