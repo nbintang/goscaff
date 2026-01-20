@@ -8,7 +8,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 * ⚡ **Instant setup** — create a new Go project with one command
 * 🧱 **Presets** — `base` (minimal) and `full` (production-ready)
@@ -20,7 +20,7 @@
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Using Go
 
@@ -32,7 +32,7 @@ Ensure `$GOPATH/bin` or `$HOME/go/bin` is in your `PATH`.
 
 ---
 
-## 🚀 Usage
+## Usage
 
 ### Create a new project (default: base preset)
 
@@ -86,7 +86,7 @@ Supported databases:
 
 ---
 
-## 📂 Example Project Structure
+## Example Project Structure
 
 ```text
 myapp/
@@ -120,7 +120,7 @@ myapp/
 
 ---
 
-## 🧭 Philosophy
+## Philosophy
 
 `goscaff` is designed with a few simple principles:
 
@@ -130,16 +130,7 @@ myapp/
 
 ---
 
-## 🛣️ Roadmap
-
-* [ ] Interactive prompts (`goscaff new`)
-* [ ] Preset selection wizard
-* [ ] Custom template support
-* [ ] Prebuilt binaries (Windows / macOS / Linux)
-
----
-
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome!
 
@@ -150,16 +141,6 @@ Contributions are welcome!
 
 ---
 
-## 📄 License
+## License
 
 MIT License
-
----
-
-## ⭐ Acknowledgements
-
-* [Cobra](https://github.com/spf13/cobra) — CLI framework
-* [fatih/color](https://github.com/fatih/color) — terminal coloring
-* Go community for inspiring great too
-
-
