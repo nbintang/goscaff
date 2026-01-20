@@ -48,9 +48,13 @@ Database:
   goscaff new myapp --preset full --db mysql --module github.com/you/myapp
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		projectName := args[0]
-		outDir := filepath.Join(".", projectName)
-
+		projectArg := args[0]
+		outDir := projectArg
+		if !filepath.IsAbs(projectArg) {
+			outDir = filepath.Join(".", projectArg)
+		}
+		outDir = filepath.Clean(outDir)
+		projectName := filepath.Base(outDir)
 		if _, err := os.Stat(outDir); err == nil {
 			return fmt.Errorf("directory %s already exists", outDir)
 		}
@@ -59,10 +63,10 @@ Database:
 		if modulePath == "" {
 			modulePath = projectName
 		}
- 
+
 		if flagPreset != "base" && flagPreset != "full" {
 			return fmt.Errorf("invalid --preset=%s (use base|full)", flagPreset)
-		} 
+		}
 		if flagDB != "postgres" && flagDB != "mysql" {
 			return fmt.Errorf("invalid --db=%s (use postgres|mysql)", flagDB)
 		}
