@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"os"
+	"os/signal"
 
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +47,20 @@ Tips:
 
 func Execute() {
 	enableColoredHelp(rootCmd)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	rootCmd.SetContext(ctx)
+
 	if err := rootCmd.Execute(); err != nil {
+ 
+		if errors.Is(err, context.Canceled) || errors.Is(err, promptui.ErrInterrupt) {
+			fmt.Fprintln(os.Stderr, "✋ Cancelled by user. Nothing was generated.")
+			return
+		}
+
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }

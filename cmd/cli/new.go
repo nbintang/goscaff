@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +16,14 @@ var (
 	flagDB     string
 	flagPreset string
 )
+
+func isInteractive(cmd *cobra.Command) bool {
+	// interaktif kalau user TIDAK set flag ini
+	// (yang penting: beda antara default vs "explicitly set")
+	return !cmd.Flags().Changed("preset") &&
+		!cmd.Flags().Changed("db") &&
+		!cmd.Flags().Changed("module")
+}
 
 var newCmd = &cobra.Command{
 	Use:   "new [project-name]",
@@ -55,41 +65,84 @@ Database:
 		}
 		outDir = filepath.Clean(outDir)
 		projectName := filepath.Base(outDir)
+
 		if _, err := os.Stat(outDir); err == nil {
 			return fmt.Errorf("directory %s already exists", outDir)
 		}
 
+		preset := flagPreset
+		db := flagDB
 		modulePath := flagModule
+
+		if isInteractive(cmd) {
+			w := scaffold.NewWizard()
+			ctx := cmd.Context()
+
+			_, err := w.SelectOption(
+				ctx,
+				"Preset",
+				[]scaffold.Option{
+					{Label: "Base (minimal, default)", Value: "base"},
+					{Label: "Full (production-ready)", Value: "full"},
+				},
+				"base",
+			)
+			if err != nil {
+				return err
+			}
+
+			db, err = w.SelectOption(
+				ctx,
+				"Database",
+				[]scaffold.Option{
+					{Label: "Postgres (default)", Value: "postgres"},
+					{Label: "MySQL", Value: "mysql"},
+				},
+				"postgres",
+			)
+			if err != nil {
+				return err
+			}
+
+			modulePath, err = w.Input(ctx, "Module path", projectName)
+			if err != nil {
+				return err
+			}
+		}
+
 		if modulePath == "" {
 			modulePath = projectName
 		}
 
-		if flagPreset != "base" && flagPreset != "full" {
-			return fmt.Errorf("invalid --preset=%s (use base|full)", flagPreset)
+		if preset != "base" && preset != "full" {
+			return fmt.Errorf("invalid --preset=%s (use base|full)", preset)
 		}
-		if flagDB != "postgres" && flagDB != "mysql" {
-			return fmt.Errorf("invalid --db=%s (use postgres|mysql)", flagDB)
+		if db != "postgres" && db != "mysql" {
+			return fmt.Errorf("invalid --db=%s (use postgres|mysql)", db)
 		}
 
 		opts := scaffold.ScaffoldOptions{
 			ProjectName: projectName,
 			ModulePath:  modulePath,
-			DB:          scaffold.DBType(flagDB),
-			Preset:      scaffold.PresetType(flagPreset),
+			DB:          scaffold.DBType(db),
+			Preset:      scaffold.PresetType(preset),
 			OutDir:      outDir,
 		}
 
 		renderer := scaffold.NewRenderer()
 		s := scaffold.NewScaffold(opts, renderer)
 		if err := s.Generate(); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
 			return err
 		}
 
-		scaffold.NewPrinter(opts).
-			PrintNextSteps()
+		scaffold.NewPrinter(opts).PrintNextSteps()
 		return nil
-
 	},
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func init() {

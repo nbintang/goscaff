@@ -14,6 +14,7 @@ const (
 	PresetBase   PresetType = "base"
 	PresetFull   PresetType = "full"
 )
+
 type Overlay struct {
 	Src string  
 	Dst string 
