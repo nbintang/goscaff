@@ -1,5 +1,4 @@
-<img width="3168" height="1344" alt="Gemini_Generated_Image_e63svre63svre63s" src="https://github.com/user-attachments/assets/0aa3160e-df50-4bcc-94ce-8fed3cd1850c" />
-
+<img width="3168" height="1344" alt="Gemini_Generated_Image_t7f4pjt7f4pjt7f4" src="https://github.com/user-attachments/assets/df715bfd-09d6-4d2a-b19e-929b4489cc0f" />
 
 # goscaff
 
@@ -162,4 +161,5 @@ MIT License
 * [Cobra](https://github.com/spf13/cobra) — CLI framework
 * [fatih/color](https://github.com/fatih/color) — terminal coloring
 * Go community for inspiring great too
+
 
