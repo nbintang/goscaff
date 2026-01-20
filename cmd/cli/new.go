@@ -59,13 +59,10 @@ Database:
 		if modulePath == "" {
 			modulePath = projectName
 		}
-
-		// validasi preset
+ 
 		if flagPreset != "base" && flagPreset != "full" {
 			return fmt.Errorf("invalid --preset=%s (use base|full)", flagPreset)
-		}
-
-		// validasi db
+		} 
 		if flagDB != "postgres" && flagDB != "mysql" {
 			return fmt.Errorf("invalid --db=%s (use postgres|mysql)", flagDB)
 		}
