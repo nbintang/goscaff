@@ -18,11 +18,12 @@ var (
 )
 
 func isInteractive(cmd *cobra.Command) bool {
-	// interaktif kalau user TIDAK set flag ini
-	// (yang penting: beda antara default vs "explicitly set")
-	return !cmd.Flags().Changed("preset") &&
-		!cmd.Flags().Changed("db") &&
-		!cmd.Flags().Changed("module")
+    if os.Getenv("GOSCAFF_NON_INTERACTIVE") == "1" {
+        return false
+    }
+    return !cmd.Flags().Changed("preset") &&
+        !cmd.Flags().Changed("db") &&
+        !cmd.Flags().Changed("module")
 }
 
 var newCmd = &cobra.Command{
@@ -78,14 +79,16 @@ Database:
 			w := scaffold.NewWizard()
 			ctx := cmd.Context()
 
-			_, err := w.SelectOption(
+			var err error
+
+			preset, err = w.SelectOption(
 				ctx,
 				"Preset",
 				[]scaffold.Option{
-					{Label: "Base (minimal, default)", Value: "base"},
-					{Label: "Full (production-ready)", Value: "full"},
+					{Label: "Base (minimal, default)", Value: string(scaffold.PresetBase)},
+					{Label: "Full (production-ready)", Value: string(scaffold.PresetFull)},
 				},
-				"base",
+				string(scaffold.PresetBase),
 			)
 			if err != nil {
 				return err
@@ -95,10 +98,10 @@ Database:
 				ctx,
 				"Database",
 				[]scaffold.Option{
-					{Label: "Postgres (default)", Value: "postgres"},
-					{Label: "MySQL", Value: "mysql"},
+					{Label: "Postgres (default)", Value: string(scaffold.DBTypePostgres)},
+					{Label: "MySQL", Value: string(scaffold.DBTypeMySQL)},
 				},
-				"postgres",
+				string(scaffold.DBTypePostgres),
 			)
 			if err != nil {
 				return err

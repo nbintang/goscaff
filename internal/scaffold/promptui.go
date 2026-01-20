@@ -1,8 +1,11 @@
 package scaffold
 
 import (
+	"bufio"
 	"context"
-	"errors"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 )
@@ -35,43 +38,41 @@ func (w *Wizard) SelectOption(ctx context.Context, label string, items []Option,
 		Items:     labels,
 		CursorPos: start,
 		Size:      len(items),
-	}
-
-	select {
-	case <-ctx.Done():
-		return "", ctx.Err()
-	default:
+		Stdout:    os.Stderr,
 	}
 
 	idx, _, err := p.Run()
 	if err != nil {
-		if errors.Is(err, promptui.ErrInterrupt) {
-			return "", context.Canceled
-		}
 		return "", err
 	}
-
 	return items[idx].Value, nil
 }
 
 func (w *Wizard) Input(ctx context.Context, label, def string) (string, error) {
-	p := promptui.Prompt{
-		Label:   label,
-		Default: def,
-	}
+	fmt.Printf("%s [%s]: ", label, def)
+
+	reader := bufio.NewReader(os.Stdin)
+
+	done := make(chan struct{})
+	var line string
+	var err error
+
+	go func() {
+		line, err = reader.ReadString('\n')
+		close(done)
+	}()
 
 	select {
 	case <-ctx.Done():
 		return "", ctx.Err()
-	default:
-	}
-
-	v, err := p.Run()
-	if err != nil {
-		if errors.Is(err, promptui.ErrInterrupt) {
-			return "", context.Canceled
+	case <-done:
+		if err != nil {
+			return "", err
 		}
-		return "", err
+		line = strings.TrimSpace(line)
+		if line == "" {
+			return def, nil
+		}
+		return line, nil
 	}
-	return v, nil
 }

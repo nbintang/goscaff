@@ -50,7 +50,12 @@ func Execute() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintln(os.Stderr, "Error: interactive prompt crashed. Try using flags --preset/--db/--module.")
+			os.Exit(1)
+		}
+	}()
 	rootCmd.SetContext(ctx)
 
 	if err := rootCmd.Execute(); err != nil {
