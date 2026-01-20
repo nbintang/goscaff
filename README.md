@@ -144,5 +144,3 @@ Contributions are welcome!
 ## License
 
 MIT License
-
----
