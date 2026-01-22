@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
     ports:
-      - "${DATABASE_PORT:-5432}:5432"
+      - "${DATABASE_PORT:-5433}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -30,7 +30,7 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -62,11 +62,11 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
 
-      # JWT  
+      # JWT
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_VERIFICATION_SECRET: ${JWT_VERIFICATION_SECRET}
 
-      # SMTP  
+      # SMTP
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_SENDER: ${SMTP_SENDER}
@@ -75,7 +75,7 @@ services:
 
       # App
       APP_ADDR: ${APP_ADDR:-0.0.0.0:3000}
-      TARGET_URL: ${TARGET_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
     command: ["/app/migrate"]
     restart: "no"
 
@@ -103,7 +103,7 @@ services:
 
       # App
       APP_ADDR: ${APP_ADDR:-0.0.0.0:8080}
-      TARGET_URL: ${TARGET_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
 
       # JWT
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}

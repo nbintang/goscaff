@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context" 
+	"context"
 	"{{.MODULE_PATH}}/config"
 	"{{.MODULE_PATH}}/internal/infra/database"
 	"{{.MODULE_PATH}}/internal/user"
@@ -11,7 +11,7 @@ import (
 
 var ROLE = []string{
 	"ADMIN",
-	"USER",
+	"MEMBER",
 }
 
 var CreateRoleEnum = CreateEnums(EnumOptions{
