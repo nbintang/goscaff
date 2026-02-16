@@ -1,0 +1,87 @@
+package http
+
+import (
+	"errors"
+	"net/http"
+
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/pkg/httpx"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+)
+
+func DefaultErrorHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		if len(c.Errors) == 0 {
+			return
+		}
+
+		err := c.Errors.Last().Err
+
+		statusCode := http.StatusInternalServerError
+		msg := "Internal Server Error"
+
+		var detail any = nil
+		var code any = nil
+
+		switch {
+		case errors.As(err, new(*apperr.AppError)):
+			var ae *apperr.AppError
+			_ = errors.As(err, &ae)
+
+			statusCode = ae.Status
+			msg = ae.Message
+			code = string(ae.Code)
+
+		case errors.As(err, new(validator.ValidationErrors)):
+			var ve validator.ValidationErrors
+			_ = errors.As(err, &ve)
+
+			out := make([]gin.H, 0, len(ve))
+			for _, fe := range ve {
+				out = append(out, gin.H{
+					"field": fe.Field(),
+					"tag":   fe.Tag(),
+				})
+			}
+
+			statusCode = http.StatusUnprocessableEntity
+			msg = "Validation Error"
+			code = "VALIDATION_ERROR"
+			detail = out
+
+		default:
+			code = "INTERNAL"
+		}
+
+		meta := gin.H{
+			"method":   getAny(c, "method"),
+			"path":     getAny(c, "path"),
+			"endpoint": getAny(c, "endpoint"),
+			"status":   statusCode,
+			"latency":  getAny(c, "latency"),
+			"ip":       getAny(c, "ip"),
+		}
+
+		c.AbortWithStatusJSON(statusCode, httpx.NewHttpResponse(
+			statusCode,
+			msg,
+			gin.H{
+				"code":  code,
+				"error": detail,
+				"meta":  meta,
+			},
+		))
+	}
+}
+
+func getAny(c *gin.Context, key string) any {
+	v, ok := c.Get(key)
+	if !ok {
+		return nil
+	}
+	return v
+}

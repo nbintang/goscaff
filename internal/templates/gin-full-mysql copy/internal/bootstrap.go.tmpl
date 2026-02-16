@@ -1,0 +1,60 @@
+package internal
+
+import (
+	"{{.MODULE_PATH}}/config"
+	nhttp "{{.MODULE_PATH}}/internal/http"
+	"{{.MODULE_PATH}}/internal/http/middleware"
+	"{{.MODULE_PATH}}/internal/infra/cache"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"net/http"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+)
+
+type Bootstrap struct {
+	*gin.Engine
+	PublicRoute    *gin.RouterGroup
+	ProtectedRoute *gin.RouterGroup
+	Env            config.Env
+	Logger         *infraapp.AppLogger
+	Server         *http.Server
+}
+
+func NewBootstrap(env config.Env, logger *infraapp.AppLogger, cacheService cache.Service) *Bootstrap {
+	app := gin.New()
+	app.Use(gin.Recovery())
+	app.Use(middleware.LoggerRequest(logger))
+	app.Use(middleware.RequestMeta())
+	app.Use(cors.Default())
+	app.Use(nhttp.DefaultErrorHandler())
+	app.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Welcome to API, Go to /api/v1",
+		})
+	})
+
+	api := app.Group("/api")
+	v1 := api.Group("/v1")
+
+	v1.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Welcome to Version 1, Go to /api/v1/users",
+		})
+	})
+
+	protected := v1.Group("/protected")
+	protected.Use(
+		middleware.AccessToken(env),
+		middleware.AccessCurrentUser(),
+		middleware.AccessNotBlacklisted(cacheService),
+	)
+
+	return &Bootstrap{
+		Engine:         app,
+		PublicRoute:    v1,
+		ProtectedRoute: protected,
+		Env:            env,
+		Logger:         logger,
+	}
+}

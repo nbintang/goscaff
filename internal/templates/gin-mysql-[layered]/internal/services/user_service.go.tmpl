@@ -1,0 +1,59 @@
+package services
+
+import (
+	"context"
+	"errors"
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/dtos"
+	"{{.MODULE_PATH}}/internal/entities"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/repositories"
+	"{{.MODULE_PATH}}/pkg/slice"
+)
+
+type userServiceImpl struct {
+	userRepo repositories.UserRepository
+	logger   *infraapp.AppLogger
+}
+
+func NewUserService(repo repositories.UserRepository, logger *infraapp.AppLogger) UserService {
+	return &userServiceImpl{repo, logger}
+}
+
+func (s *userServiceImpl) FindAllUsers(ctx context.Context, page, limit, offset int) ([]dtos.UserDTOResponse, int64, error) {
+
+	users, total, err := s.userRepo.FindAll(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, apperr.Internal(apperr.CodeInternal, "Internal Server Error", err)
+	}
+	userResponses := slice.Map[entities.User, dtos.UserDTOResponse](users, func(u entities.User) dtos.UserDTOResponse {
+		return dtos.UserDTOResponse{
+			ID:        u.ID,
+			Name:      u.Name,
+			Email:     u.Email,
+			CreatedAt: u.CreatedAt,
+		}
+	})
+
+	return userResponses, total, nil
+}
+
+func (s *userServiceImpl) FindUserByID(ctx context.Context, id string) (*dtos.UserDTOResponse, error) {
+
+	user, err := s.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, apperr.Internal(apperr.CodeInternal, "Internal Server Error", err)
+	}
+	if user == nil {
+		return nil, apperr.NotFound(apperr.CodeNotFound, "User Not Found", errors.New("User Not Found"))
+	}
+
+	dto := &dtos.UserDTOResponse{
+		ID:        user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+	}
+
+	return dto, nil
+}

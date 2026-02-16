@@ -1,0 +1,23 @@
+package middleware
+
+import (
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+func RequestMeta() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+
+		c.Set("method", c.Request.Method)
+		c.Set("path", c.Request.URL.Path)
+		if c.FullPath() != "" {
+			c.Set("endpoint", c.FullPath())
+		}
+		c.Set("status", c.Writer.Status())
+		c.Set("latency", time.Since(start).String())
+		c.Set("ip", c.ClientIP())
+	}
+}

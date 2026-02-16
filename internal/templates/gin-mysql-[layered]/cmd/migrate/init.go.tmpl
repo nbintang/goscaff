@@ -1,0 +1,34 @@
+package main
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/infra/database"
+	"os/user"
+
+	"github.com/sirupsen/logrus"
+)
+ 
+func InitMigrate(ctx context.Context, reset *bool) error {
+	dbLogger := database.NewLogger()
+	env, err := config.NewEnvs()
+	if err != nil {
+		return err
+	}
+	db, err := database.GetStandalone(env, dbLogger)
+	if err != nil {
+		return err
+	}
+
+	if *reset {
+		logrus.Println("Resetting database (dropping all tables)...")
+		if err := database.Reset(db); err != nil {
+			logrus.Fatal(err)
+		}
+	}
+	return db.WithContext(ctx).Debug().AutoMigrate(
+		&user.User{},
+		// add more models / entities in here
+		//
+	)
+}

@@ -1,0 +1,11 @@
+package services
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/internal/dtos"
+)
+
+type UserService interface {
+	FindAllUsers(ctx context.Context, page, limit, offset int) ([]dtos.UserDTOResponse, int64, error)
+	FindUserByID(ctx context.Context, id string) (*dtos.UserDTOResponse, error)
+}

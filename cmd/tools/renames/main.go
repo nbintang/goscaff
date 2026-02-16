@@ -1,4 +1,4 @@
-package renames
+package main
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	dir := "./internal/scaffold/templates"
+	dir := "./internal/templates"
 
 	// 1) preview dulu
 	// if err := RenameAllGoToTmpl(dir, true); err != nil {

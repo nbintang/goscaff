@@ -1,0 +1,20 @@
+package enums
+
+type UserRole string
+
+const (
+	Admin UserRole = "ADMIN"
+	User  UserRole = "USER"
+)
+
+func (r UserRole) IsValid() bool {
+	return r == Admin || r == User
+}
+
+func (r UserRole) IsAdmin() bool {
+	return r == Admin
+}
+
+func (r UserRole) IsUser() bool {
+	return r == User
+}

@@ -1,0 +1,57 @@
+package main
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/config"
+	app "{{.MODULE_PATH}}/internal"
+	"{{.MODULE_PATH}}/internal/infra"
+	"{{.MODULE_PATH}}/pkg/env"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"go.uber.org/dig"
+)
+
+func main() {
+	env.Load()
+
+	envs, err := config.NewEnvs()
+	if err != nil {
+		panic(err)
+	}
+
+	c := dig.New()
+
+	if err := c.Provide(func() config.Env { return envs }); err != nil {
+		panic(err)
+	}
+
+	if err := c.Provide(infra.Build); err != nil {
+		panic(err)
+	}
+
+	if err := c.Provide(app.NewBootstrap); err != nil {
+		panic(err)
+	}
+
+	if err := app.ProvideAll(c); err != nil {
+		panic(err)
+	}
+
+	if err := c.Provide(app.Build); err != nil {
+		panic(err)
+	}
+	
+	var stopFn func(context.Context) error
+	if err := c.Invoke(func(out app.StopOut) {
+		stopFn = out.Stop
+	}); err != nil {
+		panic(err)
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	_ = stopFn(context.Background())
+}

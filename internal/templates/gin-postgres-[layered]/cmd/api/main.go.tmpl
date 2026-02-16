@@ -1,0 +1,35 @@
+package main
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/config"
+	app "{{.MODULE_PATH}}/internal"
+	"{{.MODULE_PATH}}/internal/infra"
+	"{{.MODULE_PATH}}/pkg/env"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+func main() {
+	env.Load()
+	envs, err := config.NewEnvs()
+	if err != nil {
+		panic(err)
+	}
+	infra, err := infra.Build(envs)
+	if err != nil {
+		panic(err)
+	}
+
+	app := app.Build(app.Params{
+		Env:   envs,
+		Infra: infra,
+	})
+
+	// for graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	_ = app.Stop(context.Background())
+}

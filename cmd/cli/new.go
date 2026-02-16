@@ -7,23 +7,21 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nbintang/goscaff/internal/scaffold"
+	"github.com/nbintang/goscaff/internal"
 	"github.com/spf13/cobra"
 )
 
 var (
-	flagModule string
-	flagDB     string
-	flagPreset string
+	flagModule   string
+	flagTemplate string
 )
 
 func isInteractive(cmd *cobra.Command) bool {
-    if os.Getenv("GOSCAFF_NON_INTERACTIVE") == "1" {
-        return false
-    }
-    return !cmd.Flags().Changed("preset") &&
-        !cmd.Flags().Changed("db") &&
-        !cmd.Flags().Changed("module")
+	if os.Getenv("GOSCAFF_NON_INTERACTIVE") == "1" {
+		return false
+	}
+	return !cmd.Flags().Changed("template") &&
+		!cmd.Flags().Changed("module")
 }
 
 var newCmd = &cobra.Command{
@@ -71,38 +69,30 @@ Database:
 			return fmt.Errorf("directory %s already exists", outDir)
 		}
 
-		preset := flagPreset
-		db := flagDB
+		tpl := flagTemplate
 		modulePath := flagModule
 
 		if isInteractive(cmd) {
-			w := scaffold.NewWizard()
+			w := internal.NewWizard()
 			ctx := cmd.Context()
 
-			var err error
-
-			preset, err = w.SelectOption(
-				ctx,
-				"Preset",
-				[]scaffold.Option{
-					{Label: "Base (minimal, default)", Value: string(scaffold.PresetBase)},
-					{Label: "Full (production-ready)", Value: string(scaffold.PresetFull)},
-				},
-				string(scaffold.PresetBase),
-			)
+			templates, err := internal.ListTemplates()
 			if err != nil {
 				return err
 			}
+			if len(templates) == 0 {
+				return fmt.Errorf("tidak ada template di embedded FS")
+			}
 
-			db, err = w.SelectOption(
-				ctx,
-				"Database",
-				[]scaffold.Option{
-					{Label: "Postgres (default)", Value: string(scaffold.DBTypePostgres)},
-					{Label: "MySQL", Value: string(scaffold.DBTypeMySQL)},
-				},
-				string(scaffold.DBTypePostgres),
-			)
+			opts := make([]internal.Option, 0, len(templates))
+			for _, id := range templates {
+				opts = append(opts, internal.Option{
+					Label: internal.PrettyTemplateLabel(id),
+					Value: id,
+				})
+			}
+
+			tpl, err = w.SelectOption(ctx, "Template", opts, templates[0])
 			if err != nil {
 				return err
 			}
@@ -113,27 +103,24 @@ Database:
 			}
 		}
 
+		if tpl == "" {
+			return fmt.Errorf("template wajib diisi. Lihat pilihan via `goscaff templates` atau pakai mode interaktif")
+		}
+
 		if modulePath == "" {
 			modulePath = projectName
 		}
 
-		if preset != "base" && preset != "full" {
-			return fmt.Errorf("invalid --preset=%s (use base|full)", preset)
-		}
-		if db != "postgres" && db != "mysql" {
-			return fmt.Errorf("invalid --db=%s (use postgres|mysql)", db)
-		}
-
-		opts := scaffold.ScaffoldOptions{
+		opts := internal.ScaffoldOptions{
 			ProjectName: projectName,
 			ModulePath:  modulePath,
-			DB:          scaffold.DBType(db),
-			Preset:      scaffold.PresetType(preset),
+			Template:    tpl,
 			OutDir:      outDir,
 		}
 
-		renderer := scaffold.NewRenderer()
-		s := scaffold.NewScaffold(opts, renderer)
+		renderer := internal.NewRenderer()
+		s := internal.NewScaffold(opts, renderer)
+
 		if err := s.Generate(); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil
@@ -141,7 +128,7 @@ Database:
 			return err
 		}
 
-		scaffold.NewPrinter(opts).PrintNextSteps()
+		internal.NewPrinter(opts).PrintNextSteps()
 		return nil
 	},
 	SilenceUsage:  true,
@@ -152,6 +139,4 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 
 	newCmd.Flags().StringVar(&flagModule, "module", "", "Go module path (default: project-name)")
-	newCmd.Flags().StringVar(&flagPreset, "preset", "base", "Template preset: base|full")
-	newCmd.Flags().StringVar(&flagDB, "db", "postgres", "Database driver: postgres|mysql")
 }

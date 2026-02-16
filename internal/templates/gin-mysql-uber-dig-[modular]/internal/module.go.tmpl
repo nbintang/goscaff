@@ -1,0 +1,56 @@
+package internal
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/http/router"
+	"{{.MODULE_PATH}}/internal/infra"
+	"net/http"
+
+	"go.uber.org/dig"
+)
+
+type StartIn struct {
+	dig.In
+
+	Env       config.Env
+	Infra     infra.Module
+	Routes    []router.Route `group:"routes"`
+	Bootstrap *Bootstrap
+}
+
+type StopOut struct {
+	dig.Out
+	Stop func(context.Context) error
+}
+
+func Build(in StartIn) (StopOut, error) {
+	bootstrap := in.Bootstrap
+
+	RegisterRoutes(RoutesIn{
+		BootstrapApp: bootstrap,
+		Routes:       in.Routes,
+	})
+
+	addr := in.Env.AppAddr
+	if addr == "" {
+		addr = ":8080"
+	}
+
+
+	go func() {
+		in.Infra.Logger.Printf("Gin listening on http://localhost%s", addr)
+		if err := bootstrap.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			in.Infra.Logger.Printf("Gin stopped: %s", err)
+		}
+	}()
+
+	stop := func(ctx context.Context) error {
+		if bootstrap.Server != nil {
+			_ = bootstrap.Server.Shutdown(ctx)
+		}
+		return in.Infra.Stop(ctx)
+	}
+
+	return StopOut{Stop: stop}, nil
+}

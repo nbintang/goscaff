@@ -1,19 +1,16 @@
 package tools
 
-import ( 
+import (
 	"bytes"
-	"fmt" 
-	"os" 
+	"fmt"
+	"os"
 )
-
-
 
 func ReplaceModule(path, old string) error {
 	input, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-
 	if !bytes.Contains(input, []byte(old)) {
 		return nil
 	}

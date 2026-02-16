@@ -1,0 +1,11 @@
+package repositories
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/internal/entities"
+)
+
+type UserRepository interface {
+	FindAll(ctx context.Context, limit, offset int) ([]entities.User,int64, error)
+	FindByID(ctx context.Context, id string) (*entities.User, error)  
+}

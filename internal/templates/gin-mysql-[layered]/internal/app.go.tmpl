@@ -1,0 +1,51 @@
+package internal
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/infra"
+	"net/http"
+)
+
+type Params struct {
+	Env   config.Env
+	Infra infra.Module
+}
+
+type Module struct {
+	Bootstrap *Bootstrap
+	Stop      func(context.Context) error
+}
+
+func Build(params Params) Module {
+	bootstrap := NewBootstrap(
+		params.Env,
+		params.Infra.Logger,
+		params.Infra.DB,
+		params.Infra.Validator,
+	)
+
+	addr := params.Env.AppAddr
+	if addr == "" {
+		addr = ":8080"
+	}
+
+	srv := &http.Server{Addr: addr, Handler: bootstrap.Engine}
+	bootstrap.Server = srv
+
+	go func() {
+		params.Infra.Logger.Printf("Gin listening on http://localhost%s", addr)
+		if err := bootstrap.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			params.Infra.Logger.Printf("Gin stopped: %s", err)
+		}
+	}()
+
+	stop := func(ctx context.Context) error {
+		if bootstrap.Server != nil {
+			_ = bootstrap.Server.Shutdown(ctx)
+		}
+		return params.Infra.Stop(ctx)
+	}
+
+	return Module{Bootstrap: bootstrap, Stop: stop}
+}

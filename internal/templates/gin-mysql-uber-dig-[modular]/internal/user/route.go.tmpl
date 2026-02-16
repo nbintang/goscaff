@@ -1,0 +1,20 @@
+package user
+
+import (
+	"{{.MODULE_PATH}}/internal/http/router"
+
+	"github.com/gin-gonic/gin"
+)
+
+type routeImpl struct {
+	handler Handler
+}
+
+func NewRoute(userHandler Handler) router.Route {
+	return &routeImpl{userHandler}
+}
+func (r *routeImpl) RegisterRoute(route *gin.RouterGroup) {
+	users := route.Group("/users")
+	users.GET("/", r.handler.GetAllUsers)
+	users.GET("/:id", r.handler.GetUserByID)
+}

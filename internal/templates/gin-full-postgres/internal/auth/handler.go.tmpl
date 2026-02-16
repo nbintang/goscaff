@@ -1,0 +1,128 @@
+package auth
+
+import (
+	"errors"
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/infra/validator"
+	"{{.MODULE_PATH}}/pkg/httpx"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type authHandlerImpl struct {
+	authService AuthService
+	validate    validator.Service
+	env         config.Env
+	logger      *infraapp.AppLogger
+}
+
+func NewAuthHandler(authService AuthService, validate validator.Service, env config.Env, logger *infraapp.AppLogger) AuthHandler {
+	return &authHandlerImpl{authService, validate, env, logger}
+}
+
+func (h *authHandlerImpl) Register(c *gin.Context) {
+	var body RegisterRequestDTO
+	ctx := c.Request.Context()
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		_ = c.Error(apperr.BadRequest(apperr.CodeBadRequest, "Invalid Request", err))
+		return
+	}
+	if err := h.validate.Struct(body); err != nil {
+		_ = c.Error(apperr.BadRequest(apperr.CodeBadRequest, "Validation Error", err))
+		return
+	}
+	if err := h.authService.Register(ctx, &body); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusCreated, httpx.NewHttpResponse[any](
+		http.StatusCreated,
+		"Success! please check your email",
+		nil,
+	))
+}
+
+func (h *authHandlerImpl) VerifyEmail(c *gin.Context) {
+	token := c.Query("token")
+	ctx := c.Request.Context()
+	tokens, err := h.authService.VerifyEmailToken(ctx, token)
+	if err != nil {
+		_ = c.Error(apperr.Unauthorized(apperr.CodeUnauthorized, "Unathorized", err))
+		return
+	}
+	h.setRefreshTokenCookie(c, tokens.RefreshToken)
+	c.JSON(http.StatusOK, httpx.NewHttpResponse(
+		http.StatusOK,
+		"Email Verified Successfull!",
+		gin.H{"access_token": token},
+	))
+}
+
+func (h *authHandlerImpl) Login(c *gin.Context) {
+	var body LoginRequestDTO
+	ctx := c.Request.Context()
+	if err := c.ShouldBindJSON(&body); err != nil {
+		_ = c.Error(apperr.BadRequest(apperr.CodeBadRequest, "Invalid Request", err))
+		return
+	}
+	tokens, err := h.authService.Login(ctx, &body)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	h.setRefreshTokenCookie(c, tokens.RefreshToken)
+	c.JSON(http.StatusOK, httpx.NewHttpResponse(
+		http.StatusOK,
+		"Login successful",
+		gin.H{"access_token": tokens.AccessToken},
+	))
+}
+
+func (h *authHandlerImpl) RefreshToken(c *gin.Context) {
+	ctx := c.Request.Context()
+	oldRefreshToken, err := c.Cookie("refresh_token")
+	if err != nil || oldRefreshToken == "" {
+		_ = c.Error(apperr.Unauthorized(apperr.CodeUnauthorized, "Unathorized", errors.New("Unathorized")))
+		return
+	}
+
+	tokens, err := h.authService.RefreshToken(ctx, oldRefreshToken)
+	if err != nil {
+		h.clearRefreshTokenCookie(c)
+		_ = c.Error(apperr.Unauthorized(apperr.CodeUnauthorized, "Unathorized", err))
+		return
+	}
+
+	h.setRefreshTokenCookie(c, tokens.RefreshToken)
+	c.JSON(http.StatusOK, httpx.NewHttpResponse(
+		http.StatusOK,
+		"Refresh Token successful",
+		gin.H{"access_token": tokens.AccessToken},
+	))
+}
+
+func (h *authHandlerImpl) Logout(c *gin.Context) {
+	ctx := c.Request.Context()
+	refreshToken, _ := c.Cookie("refresh_token")
+	if err := h.authService.Logout(ctx, refreshToken); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	h.clearRefreshTokenCookie(c)
+	c.JSON(http.StatusOK, httpx.NewHttpResponse[any](
+		http.StatusOK,
+		"logout Success", nil,
+	))
+}
+
+func (h *authHandlerImpl) setRefreshTokenCookie(c *gin.Context, token string) {
+	c.SetCookie("refresh_token", token, 3600*24, "/", "", false, true)
+}
+
+func (h *authHandlerImpl) clearRefreshTokenCookie(c *gin.Context) {
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+}

@@ -1,0 +1,51 @@
+package middleware
+
+import (
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/enums"
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+func AccessToken(env config.Env) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message":     "unauthorized",
+				"status_code": http.StatusUnauthorized,
+				"error":       "missing authorization header",
+			})
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message":     "unauthorized",
+				"status_code": http.StatusUnauthorized,
+				"error":       "malformed token",
+			})
+			return
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte(env.JWTAccessSecret), nil
+		})
+
+		if err != nil || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message":     "unauthorized",
+				"status_code": http.StatusUnauthorized,
+				"error":       err.Error(),
+			})
+			return
+		}
+
+		c.Set(enums.AccessAuthKey, token)
+		c.Next()
+	}
+}

@@ -1,0 +1,33 @@
+package middleware
+
+import (
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"time"
+
+
+	"github.com/gin-gonic/gin" 
+	"github.com/sirupsen/logrus"
+)
+
+func LoggerRequest(l *infraapp.AppLogger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+	 c.Next() 
+		
+		status := c.Writer.Status()
+		
+		endpoint := ""
+		if c.FullPath() != ""{
+			endpoint =c.FullPath()
+		}
+
+		l.WithFields(logrus.Fields{
+			"method":  c.Request.Method,
+			"path":    c.Request.URL.Path,
+			"endpoint": endpoint,
+			"status":  status,
+			"latency": time.Since(start).String(),
+			"ip":      c.ClientIP(),
+		}).Info("http_request")
+	}
+}

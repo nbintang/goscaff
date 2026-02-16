@@ -1,0 +1,16 @@
+package database
+
+import "gorm.io/gorm"
+
+func Reset(db *gorm.DB) error {
+	tables, err := db.Migrator().GetTables()
+	if err != nil {
+		return err
+	}
+	for _, t := range tables {
+		if err := db.Migrator().DropTable(t); err != nil {
+			return err
+		}
+	}
+	return nil
+}

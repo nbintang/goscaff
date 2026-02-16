@@ -1,0 +1,28 @@
+package auth
+
+import (
+	"{{.MODULE_PATH}}/internal/http/middleware"
+	"{{.MODULE_PATH}}/internal/http/router"
+
+	"github.com/gin-gonic/gin"
+)
+
+type AuthRouteParams struct {
+	router.InjectRouteParams
+	AuthHandler AuthHandler
+}
+type authRouteImpl struct {
+	authHandler AuthHandler
+}
+
+func NewAuthRoute(params AuthRouteParams) router.Route {
+	return &authRouteImpl{authHandler: params.AuthHandler}
+}
+func (r *authRouteImpl) RegisterRoute(route gin.IRouter) {
+	auth := route.Group("/auth")
+	auth.POST("/register", r.authHandler.Register)
+	auth.POST("/login", r.authHandler.Login)
+	auth.POST("/verify-email", r.authHandler.VerifyEmail)
+	auth.POST("/refresh-token", r.authHandler.RefreshToken)
+	auth.POST("/logout", middleware.AccessCurrentUser(), r.authHandler.Logout)
+}

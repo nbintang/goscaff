@@ -1,0 +1,33 @@
+package user
+
+import (
+	"{{.MODULE_PATH}}/internal/di"
+	"{{.MODULE_PATH}}/internal/http/router"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/infra/validator"
+
+	"go.uber.org/dig"
+	"gorm.io/gorm"
+)
+
+type Params struct {
+	DB        *gorm.DB
+	Logger    *infraapp.AppLogger
+	Validator validator.Service
+}
+
+type RouteOut struct {
+	dig.Out
+	Route router.Route `group:"routes"`
+}
+
+func Build(params Params) (RouteOut, error) {
+	repo := NewRepository(params.DB)
+	service := NewService(repo, params.Logger)
+	handler := NewHandler(service, params.Logger, params.Validator)
+	route := NewRoute(handler)
+	return RouteOut{Route: route}, nil
+}
+
+
+var Module = di.RegisterModule[Params, RouteOut](Build)

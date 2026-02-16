@@ -1,0 +1,48 @@
+package cache
+
+import (
+	"{{.MODULE_PATH}}/internal/apperr"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+func Throttle(service Service, params ThrottleParams) gin.HandlerFunc {
+	exp := params.Expiration
+	if exp <= 0 {
+		exp = 1 * time.Minute
+	}
+	prefix := params.Prefix
+	if prefix == "" {
+		prefix = "route"
+	}
+	limit := int64(params.MaxLimit)
+
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		ip := c.ClientIP()
+		// Use Request.URL.Path to match Fiber's c.Path() behavior
+		key := prefix + ":" + c.Request.URL.Path + ":" + ip
+
+		count, err := service.Incr(ctx, key)
+		if err != nil {
+			c.Next()
+			return
+		}
+
+		if count == 1 {
+			_ = service.Expire(ctx, key, exp)
+		}
+
+		if count > limit {
+			_ = c.Error(apperr.TooManyRequests(
+				apperr.CodeTooManyRequests,
+				"Too Many Request",
+				nil,
+			))
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

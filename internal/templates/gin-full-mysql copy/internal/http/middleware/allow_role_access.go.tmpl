@@ -1,0 +1,30 @@
+package middleware
+
+import (
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/enums"
+	"{{.MODULE_PATH}}/internal/identity"
+
+	"github.com/gin-gonic/gin"
+)
+
+func AllowRoleAccess(roles ...enums.EUserRoleType) gin.HandlerFunc {
+	roleSet := make(map[enums.EUserRoleType]struct{}, len(roles))
+	for _, r := range roles {
+		roleSet[r] = struct{}{}
+	}
+	return func(c *gin.Context) {
+		user, err := identity.CurrentUser(c)
+		if err != nil {
+			_ = c.Error(err)
+			c.Abort()
+			return
+		}
+		if _, ok := roleSet[user.Role]; !ok {
+			_ = c.Error(apperr.Forbidden(apperr.CodeForbidden, "Forbidden", nil))
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

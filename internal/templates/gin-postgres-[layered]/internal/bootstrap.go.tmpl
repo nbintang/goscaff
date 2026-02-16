@@ -1,0 +1,62 @@
+package internal
+
+import (
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/handlers"
+	nhttp "{{.MODULE_PATH}}/internal/http"
+	"{{.MODULE_PATH}}/internal/http/middleware"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/infra/validator"
+	"{{.MODULE_PATH}}/internal/repositories"
+	"{{.MODULE_PATH}}/internal/routes"
+	"{{.MODULE_PATH}}/internal/services"
+
+	"net/http"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+type Bootstrap struct {
+	*gin.Engine
+	Route  *gin.RouterGroup
+	Env    config.Env
+	Logger *infraapp.AppLogger
+	Server *http.Server
+}
+
+func NewBootstrap(env config.Env, logger *infraapp.AppLogger, db *gorm.DB, v validator.Service) *Bootstrap {
+	app := gin.New()
+	app.Use(gin.Recovery())
+	app.Use(middleware.LoggerRequest(logger))
+	app.Use(middleware.RequestMeta())
+	app.Use(cors.Default())
+	app.Use(nhttp.DefaultErrorHandler())
+
+	app.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "Welcome to API, Go to /api/v1"})
+	})
+
+	api := app.Group("/api")
+	v1 := api.Group("/v1")
+
+	v1.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "Welcome to Version 1, Go to /api/v1/users"})
+	})
+
+	// ===== LAYERED WIRING (repo -> service -> handler) =====
+	userRepo := repositories.NewUserRepository(db)
+	userSvc := services.NewUserService(userRepo, logger)
+	userHandler := handlers.NewUserHandler(userSvc, logger, v)
+
+	// ===== ROUTES REGISTER =====
+	routes.RegisterUserRoutes(v1, userHandler)
+
+	return &Bootstrap{
+		Engine: app,
+		Route:  v1,
+		Env:    env,
+		Logger: logger,
+	}
+}

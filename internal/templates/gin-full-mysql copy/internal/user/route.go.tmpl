@@ -1,0 +1,28 @@
+package user
+
+import (
+	"{{.MODULE_PATH}}/internal/enums"
+	"{{.MODULE_PATH}}/internal/http/middleware"
+	"{{.MODULE_PATH}}/internal/http/router"
+
+	"github.com/gin-gonic/gin"
+)
+
+type UserRouteParams struct {
+	router.InjectRouteParams
+	UserHandler UserHandler
+}
+type userRouteImpl struct {
+	userHandler UserHandler
+}
+
+func NewUserRoute(params UserRouteParams) router.ProtectedRoute {
+	return &userRouteImpl{userHandler: params.UserHandler}
+}
+func (r *userRouteImpl) RegisterProtectedRoute(route gin.IRouter) {
+	users := route.Group("/users")
+	users.GET("/me", r.userHandler.GetCurrentUserProfile)
+	users.PATCH("/me", r.userHandler.UpdateCurrentUser)
+	users.GET("/", middleware.AllowRoleAccess(enums.Admin), r.userHandler.GetAllUsers)
+	users.GET("/:id", middleware.AllowRoleAccess(enums.Admin), r.userHandler.GetUserByID)
+}

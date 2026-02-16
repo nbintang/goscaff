@@ -1,0 +1,68 @@
+package handlers
+
+import (
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/dtos"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/infra/validator"
+	"{{.MODULE_PATH}}/internal/services"
+	"{{.MODULE_PATH}}/pkg/httpx"
+	"{{.MODULE_PATH}}/pkg/pagination"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type userHandlerImpl struct {
+	userService services.UserService
+	logger      *infraapp.AppLogger
+	validator   validator.Service
+}
+
+func NewUserHandler(userService services.UserService, logger *infraapp.AppLogger, validator validator.Service) UserHandler {
+	return &userHandlerImpl{userService, logger, validator}
+}
+
+func (h *userHandlerImpl) GetAllUsers(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var query pagination.Query
+	if err := c.ShouldBindQuery(&query); err != nil {
+		_ = c.Error(apperr.BadRequest(apperr.CodeBadRequest, "Invalid Request", err))
+		return
+	}
+
+	query = query.Normalize(10, 100)
+
+	data, total, err := h.userService.FindAllUsers(ctx, query.Page, query.Limit, query.Offset())
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	meta := pagination.NewMeta(query.Page, query.Limit, total)
+
+	c.JSON(http.StatusOK, httpx.NewHttpPaginationResponse[[]dtos.UserDTOResponse](
+		http.StatusOK,
+		"Success",
+		data,
+		meta,
+	))
+}
+
+func (h *userHandlerImpl) GetUserByID(c *gin.Context) {
+	id := c.Param("id")
+	ctx := c.Request.Context()
+
+	data, err := h.userService.FindUserByID(ctx, id)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, httpx.NewHttpResponse(
+		http.StatusOK,
+		"Success",
+		data,
+	))
+}

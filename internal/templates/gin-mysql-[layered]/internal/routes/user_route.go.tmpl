@@ -1,0 +1,13 @@
+package routes
+
+import (
+	"{{.MODULE_PATH}}/internal/handlers"
+	"github.com/gin-gonic/gin"
+)
+
+func RegisterUserRoutes(rg *gin.RouterGroup, h handlers.UserHandler) {
+	users := rg.Group("/users")
+	users.GET("/", h.GetAllUsers)
+	users.GET("/:id", h.GetUserByID)
+	// users.POST("/", h.CreateUser)
+}

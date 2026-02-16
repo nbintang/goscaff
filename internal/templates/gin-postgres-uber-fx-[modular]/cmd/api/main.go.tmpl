@@ -1,0 +1,19 @@
+package main
+
+import (
+	"{{.MODULE_PATH}}/config"
+	app "{{.MODULE_PATH}}/internal"
+	"{{.MODULE_PATH}}/internal/infra"
+	"{{.MODULE_PATH}}/pkg/env"
+
+	"go.uber.org/fx"
+)
+
+func main() {
+	env.Load()
+	fx.New(
+		config.Module,
+		infra.Module,
+		app.Module,
+	).Run()
+}

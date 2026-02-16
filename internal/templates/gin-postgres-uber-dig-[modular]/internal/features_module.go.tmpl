@@ -1,0 +1,16 @@
+package internal
+
+import (
+	"errors"
+	"{{.MODULE_PATH}}/internal/user"
+
+	"go.uber.org/dig"
+)
+
+func ProvideAll(c *dig.Container) error {
+	return errors.Join(
+		user.Module(c),
+		// Add more modules here
+		// eg: order.Module(c),
+	)
+}

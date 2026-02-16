@@ -1,0 +1,54 @@
+package middleware
+
+import (
+	"errors"
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/enums"
+	"{{.MODULE_PATH}}/internal/identity"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+func AccessCurrentUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenVal, ok := c.Get(enums.AccessAuthKey)
+		if !ok {
+			_ = c.Error(apperr.Unauthorized(apperr.CodeUnauthorized, "Unauthorized", errors.New("Unauthorized")))
+			c.Abort()
+			return
+		}
+		token, ok := tokenVal.(*jwt.Token)
+		if !ok || token == nil {
+			_ = c.Error(apperr.Unauthorized(apperr.CodeUnauthorized, "Unauthorized", errors.New("Unauthorized")))
+			c.Abort()
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			_ = c.Error(apperr.Internal(apperr.CodeInternal, "Internal Server Error", errors.New("Internal Server Error")))
+			c.Abort()
+			return
+		}
+
+		id, _ := claims["id"].(string)
+		email, _ := claims["email"].(string)
+		role, _ := claims["role"].(string)
+		jti, _ := claims["jti"].(string)
+
+		if id == "" || email == "" || role == "" || jti == "" {
+			_ = c.Error(apperr.Unauthorized(apperr.CodeUnauthorized, "Unauthorized", errors.New("Unauthorized")))
+			c.Abort()
+			return
+		}
+
+		c.Set(enums.CurrentUserKey, &identity.AuthClaims{
+			ID:    id,
+			Email: email,
+			Role:  enums.EUserRoleType(role),
+			JTI:   jti,
+		})
+		c.Next()
+	}
+}

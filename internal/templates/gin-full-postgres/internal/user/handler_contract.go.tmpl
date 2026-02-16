@@ -1,0 +1,10 @@
+package user
+
+import "github.com/gin-gonic/gin"
+
+type UserHandler interface {
+	GetAllUsers(c *gin.Context)
+	GetUserByID(c *gin.Context)
+	GetCurrentUserProfile(c *gin.Context)
+	UpdateCurrentUser(c *gin.Context)
+}

@@ -1,0 +1,9 @@
+package di
+
+import "go.uber.org/dig"
+
+func RegisterModule[P any, R any](build func(P) (R, error)) func(*dig.Container) error {
+	return func(c *dig.Container) error {
+		return c.Provide(build)
+	}
+}

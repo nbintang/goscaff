@@ -1,0 +1,33 @@
+package infra
+
+import (
+	"{{.MODULE_PATH}}/internal/infra/cache"
+	"{{.MODULE_PATH}}/internal/infra/database"
+	"{{.MODULE_PATH}}/internal/infra/email"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/infra/token"
+	"{{.MODULE_PATH}}/internal/infra/validator"
+
+	"go.uber.org/fx"
+)
+
+var Module = fx.Module(
+	"infra",
+	fx.Provide(
+		database.NewService,
+		cache.NewService,
+	),
+	fx.Provide(
+		validator.NewService,
+		token.NewService,
+		email.NewService,
+	),
+	fx.Provide(
+		infraapp.NewLogger,
+		database.NewLogger,
+	),
+	fx.Invoke(
+		cache.RegisterLifecycle,
+		database.RegisterLifecycle,
+	),
+)

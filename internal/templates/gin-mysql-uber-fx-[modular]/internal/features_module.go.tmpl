@@ -1,0 +1,12 @@
+package internal
+
+import (
+	"{{.MODULE_PATH}}/internal/user"
+
+	"go.uber.org/fx"
+)
+
+var FeatureModules = fx.Options(
+	user.Module,
+	// add more modules in here
+)

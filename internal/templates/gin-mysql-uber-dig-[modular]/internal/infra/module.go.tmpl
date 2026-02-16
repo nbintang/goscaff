@@ -1,0 +1,55 @@
+package infra
+
+import (
+	"context"
+	"{{.MODULE_PATH}}/config"
+	"{{.MODULE_PATH}}/internal/infra/database"
+	"{{.MODULE_PATH}}/internal/infra/infraapp"
+	"{{.MODULE_PATH}}/internal/infra/validator"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+type Module struct {
+	DB        *gorm.DB
+	DBLogger  *database.DBLogger
+	Logger    *infraapp.AppLogger
+	Validator validator.Service
+	Stop      func(ctx context.Context) error
+}
+
+func Build(env config.Env) (Module, error) {
+	dbLogger := database.NewLogger()
+	db, err := database.NewService(env, dbLogger)
+	if err != nil {
+		return Module{}, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return Module{}, err
+	}
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
+	appLogger := infraapp.NewLogger()
+	val := validator.NewService()
+
+	if err := sqlDB.Ping(); err != nil {
+		return Module{}, err
+	}
+
+	stop := func(ctx context.Context) error {
+		return sqlDB.Close()
+	}
+
+	return Module{
+		DB:        db,
+		DBLogger:  dbLogger,
+		Logger:    appLogger,
+		Validator: val,
+		Stop:      stop,
+	}, nil
+}

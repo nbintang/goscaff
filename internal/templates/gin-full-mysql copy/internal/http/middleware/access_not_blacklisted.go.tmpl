@@ -1,0 +1,34 @@
+package middleware
+
+import (
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/identity"
+	"{{.MODULE_PATH}}/internal/infra/cache"
+
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+)
+
+func AccessNotBlacklisted(cacheService cache.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, err := identity.CurrentUser(c)
+		if err != nil {
+			_ = c.Error(err)
+			c.Abort()
+			return
+		}
+		key := "blacklist_access:" + user.JTI
+		ctx := c.Request.Context()
+		if _, err = cacheService.Get(ctx, key); err == nil {
+			_ = c.Error(apperr.Forbidden(apperr.CodeForbidden, "Access Denied", err))
+			c.Abort()
+			return
+		}
+		if err != redis.Nil {
+			_ = c.Error(apperr.Internal(apperr.CodeInternal, "Internal Server Error", err))
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

@@ -1,0 +1,20 @@
+package identity
+
+import (
+	"{{.MODULE_PATH}}/internal/apperr"
+	"{{.MODULE_PATH}}/internal/enums"
+
+	"github.com/gin-gonic/gin"
+)
+
+func CurrentUser(c *gin.Context) (*AuthClaims, error) {
+	v, ok := c.Get(enums.CurrentUserKey)
+	if !ok {
+		return nil, apperr.Unauthorized(apperr.CodeUnauthorized, "Unauthorized", nil)
+	}
+	user, ok := v.(*AuthClaims)
+	if !ok || user == nil {
+		return nil, apperr.Unauthorized(apperr.CodeUnauthorized, "Unauthorized", nil)
+	}
+	return user, nil
+}
