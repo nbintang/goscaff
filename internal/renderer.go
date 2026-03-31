@@ -3,8 +3,10 @@ package internal
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -16,14 +18,26 @@ type Renderer interface {
 }
 
 type rendererImpl struct {
+	templateFS fs.FS
 }
 
+var scaffoldTemplateMarker = regexp.MustCompile(`\{\{\s*\.(PROJECT_NAME|MODULE_PATH|TEMPLATE)\b`)
+
 func NewRenderer() Renderer {
-	return &rendererImpl{}
+	fsys, err := templateFS()
+	if err != nil {
+		return &rendererImpl{}
+	}
+
+	return &rendererImpl{templateFS: fsys}
 }
 
 func (r *rendererImpl) RenderDirTo(srcRoot, dstBase string, opts ScaffoldOptions) error {
-	entries, err := templateFS.ReadDir(srcRoot)
+	if r.templateFS == nil {
+		return fmt.Errorf("template filesystem is not available")
+	}
+
+	entries, err := fs.ReadDir(r.templateFS, srcRoot)
 	if err != nil {
 		return err
 	}
@@ -43,40 +57,26 @@ func (r *rendererImpl) RenderDirTo(srcRoot, dstBase string, opts ScaffoldOptions
 			continue
 		}
 
-		if strings.HasSuffix(e.Name(), ".tmpl") {
+		b, err := fs.ReadFile(r.templateFS, srcPath)
+		if err != nil {
+			return err
+		}
+
+		if shouldRenderTemplate(srcPath, b) {
 			outPath = strings.TrimSuffix(outPath, ".tmpl")
 
-			b, err := templateFS.ReadFile(srcPath)
+			rendered, err := renderTemplate(srcPath, b, opts)
 			if err != nil {
 				return err
-			}
-
-			t, err := template.New(e.Name()).Parse(string(b))
-			if err != nil {
-				return fmt.Errorf("parse template %s: %w", srcPath, err)
-			}
-
-			var buf bytes.Buffer
-			if err := t.Execute(&buf, map[string]any{
-				"PROJECT_NAME": opts.ProjectName,
-				"MODULE_PATH":  opts.ModulePath,
-				"TEMPLATE":     opts.Template,
-			}); err != nil {
-				return fmt.Errorf("execute template %s: %w", srcPath, err)
 			}
 
 			if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 				return err
 			}
-			if err := os.WriteFile(outPath, buf.Bytes(), 0o644); err != nil {
+			if err := os.WriteFile(outPath, rendered, 0o644); err != nil {
 				return err
 			}
 			continue
-		}
-
-		b, err := templateFS.ReadFile(srcPath)
-		if err != nil {
-			return err
 		}
 
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
@@ -94,33 +94,26 @@ func (r *rendererImpl) RenderFileTo(srcFile, dstFile string, opts ScaffoldOption
 
 	srcFile = filepath.ToSlash(srcFile)
 
-	b, err := templateFS.ReadFile(srcFile)
+	if r.templateFS == nil {
+		return fmt.Errorf("template filesystem is not available")
+	}
+
+	b, err := fs.ReadFile(r.templateFS, srcFile)
 	if err != nil {
 		return err
 	}
 
 	outPath := filepath.Join(opts.OutDir, dstFile)
 
-	// kalau .tmpl → execute template
-	if strings.HasSuffix(srcFile, ".tmpl") {
-		t, err := template.New(filepath.Base(srcFile)).Parse(string(b))
+	if shouldRenderTemplate(srcFile, b) {
+		rendered, err := renderTemplate(srcFile, b, opts)
 		if err != nil {
-			return fmt.Errorf("parse template %s: %w", srcFile, err)
+			return err
 		}
-
-		var buf bytes.Buffer
-		if err := t.Execute(&buf, map[string]any{
-			"PROJECT_NAME": opts.ProjectName,
-			"MODULE_PATH":  opts.ModulePath,
-			"TEMPLATE":     opts.Template,
-		}); err != nil {
-			return fmt.Errorf("execute template %s: %w", srcFile, err)
-		}
-
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 			return err
 		}
-		return os.WriteFile(outPath, buf.Bytes(), 0o644)
+		return os.WriteFile(outPath, rendered, 0o644)
 	}
 
 	// non-template: copy raw
@@ -132,4 +125,26 @@ func (r *rendererImpl) RenderFileTo(srcFile, dstFile string, opts ScaffoldOption
 
 func (r *rendererImpl) RenderDir(srcRoot string, opts ScaffoldOptions) error {
 	return r.RenderDirTo(srcRoot, "", opts)
+}
+
+func shouldRenderTemplate(path string, content []byte) bool {
+	return strings.HasSuffix(path, ".tmpl") || scaffoldTemplateMarker.Match(content)
+}
+
+func renderTemplate(path string, content []byte, opts ScaffoldOptions) ([]byte, error) {
+	t, err := template.New(filepath.Base(path)).Parse(string(content))
+	if err != nil {
+		return nil, fmt.Errorf("parse template %s: %w", path, err)
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, map[string]any{
+		"PROJECT_NAME": opts.ProjectName,
+		"MODULE_PATH":  opts.ModulePath,
+		"TEMPLATE":     opts.Template,
+	}); err != nil {
+		return nil, fmt.Errorf("execute template %s: %w", path, err)
+	}
+
+	return buf.Bytes(), nil
 }

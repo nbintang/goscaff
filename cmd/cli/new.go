@@ -139,4 +139,5 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 
 	newCmd.Flags().StringVar(&flagModule, "module", "", "Go module path (default: project-name)")
+	newCmd.Flags().StringVar(&flagTemplate, "template", "", "Template ID to use (skips interactive template selection)")
 }

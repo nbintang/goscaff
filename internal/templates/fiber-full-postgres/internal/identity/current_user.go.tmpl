@@ -1,0 +1,17 @@
+package identity
+
+import (
+	"fiber-full-postgres/internal/apperr"
+	"fiber-full-postgres/internal/enums"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+func CurrentUser(c *fiber.Ctx) (*AuthClaims, error) {
+	v := c.Locals(enums.CurrentUserKey)
+	user, ok := v.(*AuthClaims)
+	if !ok || user == nil {
+		return nil, apperr.Unauthorized(apperr.CodeUnauthorized, "Unauthorized", nil)
+	}
+	return user, nil
+}

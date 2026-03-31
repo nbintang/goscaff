@@ -1,0 +1,28 @@
+package auth
+
+import (
+	"fiber-full-postgres/internal/http/middleware"
+	"fiber-full-postgres/internal/http/router"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+type AuthRouteParams struct {
+	router.InjectRouteParams
+	AuthHandler AuthHandler
+}
+type authRouteImpl struct {
+	authHandler AuthHandler
+}
+
+func NewAuthRoute(params AuthRouteParams) router.Route {
+	return &authRouteImpl{authHandler: params.AuthHandler}
+}
+func (r *authRouteImpl) RegisterRoute(route fiber.Router) {
+	auth := route.Group("/auth")
+	auth.Post("/register", r.authHandler.Register)
+	auth.Post("/login", r.authHandler.Login)
+	auth.Post("/verify-email", r.authHandler.VerifyEmail)
+	auth.Post("/refresh-token", r.authHandler.RefreshToken)
+	auth.Post("/logout", middleware.AccessCurrentUser(), r.authHandler.Logout)
+}

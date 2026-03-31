@@ -9,15 +9,17 @@ import (
 
 func main() {
 	dir := "./internal/templates"
+	dryRun := false
 
-	// 1) preview dulu
-	// if err := RenameAllGoToTmpl(dir, true); err != nil {
-	// 	fmt.Println("error:", err)
-	// 	os.Exit(1)
-	// }
+	if len(os.Args) > 1 && os.Args[1] != "" {
+		dir = os.Args[1]
+	}
 
-	// 2) kalau sudah yakin, jalankan real rename
-	if err := tools.RenameAllGoToTmpl(dir, false); err != nil {
+	if len(os.Args) > 2 && (os.Args[2] == "--dry-run" || os.Args[2] == "-n") {
+		dryRun = true
+	}
+
+	if err := tools.RenameAllGoToTmpl(dir, dryRun); err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
 	}

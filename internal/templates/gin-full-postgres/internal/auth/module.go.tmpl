@@ -14,8 +14,9 @@ var Module = fx.Module(
 		router.ProvideRoute[AuthRouteParams, router.Route](
 			router.ProvideRouteOptions[AuthRouteParams, router.Route]{
 				Constructor: NewAuthRoute,
-				Acc:         router.RouteProtected,
+				Acc:         router.RoutePublic,
 			},
 		),
 	),
 )
+

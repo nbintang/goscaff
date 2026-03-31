@@ -1,0 +1,12 @@
+package cache
+
+import (
+	"time"
+
+)
+
+type ThrottleParams struct {
+	MaxLimit int
+	Expiration time.Duration
+	Prefix string
+}

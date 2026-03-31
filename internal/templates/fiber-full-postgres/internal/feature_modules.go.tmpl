@@ -1,0 +1,14 @@
+package internal
+
+import (
+	"fiber-full-postgres/internal/auth"
+	"fiber-full-postgres/internal/user"
+
+	"go.uber.org/fx"
+)
+
+var FeatureModules = fx.Options(
+	user.Module,
+	auth.Module,
+	// add more modules in here
+)

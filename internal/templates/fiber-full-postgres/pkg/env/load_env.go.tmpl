@@ -1,0 +1,10 @@
+package env
+
+import (
+	"github.com/joho/godotenv" 
+)
+
+func Load() {
+	_ = godotenv.Load(".env")       
+	_ = godotenv.Overload(".env.local")  
+}

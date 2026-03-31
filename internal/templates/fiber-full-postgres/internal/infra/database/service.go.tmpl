@@ -1,0 +1,11 @@
+package database
+
+import (
+	"fiber-full-postgres/config"
+
+	"gorm.io/gorm"
+)
+
+func NewService(env config.Env, logger *DBLogger) (*gorm.DB, error) {
+	return GetStandalone(env, logger)
+}

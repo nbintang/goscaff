@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"embed"
 	"fmt"
 	"os"
 
@@ -19,21 +18,19 @@ type ScaffoldOptions struct {
 }
 
 type scaffoldImpl struct {
-	templateFS embed.FS
-	opts       ScaffoldOptions
-	renderer   Renderer
+	opts     ScaffoldOptions
+	renderer Renderer
 }
 
 func NewScaffold(opts ScaffoldOptions, renderer Renderer) Scaffold {
 	return &scaffoldImpl{
-		templateFS: templateFS,
-		opts:       opts,
-		renderer:   renderer,
+		opts:     opts,
+		renderer: renderer,
 	}
 }
 
 func (s *scaffoldImpl) Generate() error {
-	templateRoot := "templates/" + s.opts.Template
+	templateRoot := s.opts.Template
 
 	fmt.Println()
 	pkg.Header("Goscaff • Project Generator")
@@ -65,4 +62,3 @@ func (s *scaffoldImpl) Generate() error {
 
 	return nil
 }
-

@@ -1,11 +1,18 @@
 package internal
 
 import (
+	"fmt"
+	"io/fs"
 	"sort"
 )
 
 func ListTemplates() ([]string, error) {
-	entries, err := templateFS.ReadDir("templates")
+	fsys, err := templateFS()
+	if err != nil {
+		return nil, fmt.Errorf("open templates directory: %w", err)
+	}
+
+	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return nil, err
 	}
@@ -30,21 +37,21 @@ func ListTemplates() ([]string, error) {
 func PrettyTemplateLabel(id string) string {
 	switch id {
 	case "gin-full-postgres":
-		return "Gin Full Postgres"
+		return "Gin & Postgres Full Setup (Modular)"
 	case "gin-full-mysql":
-		return "Gin Full Mysql"
+		return "Gin & Mysql Full Setup (Modular)"
 	case "gin-mysql-modular":
-		return "Gin Mysql (Modular)"
+		return "Gin & Mysql (Modular)"
 	case "gin-mysql-uber-dig-modular":
-		return "Gin Mysql Uber Dig (Modular)"
+		return "Gin & Mysql & Uber Dig (Modular)"
 	case "gin-mysql-uber-fx-modular":
-		return "Gin Mysql Uber Fx (Modular)"
+		return "Gin & Mysql & Uber Fx (Modular)"
 	case "gin-postgres-modular":
-		return "Gin Postgres (Modular)"
+		return "Gin & Postgres (Modular)"
 	case "gin-postgres-uber-dig-modular":
-		return "Gin Postgres Uber Dig (Modular)"
+		return "Gin & Postgres & Uber Dig (Modular)"
 	case "gin-postgres-uber-fx-modular":
-		return "Gin Postgres Uber Fx (Modular)"
+		return "Gin & Postgres & Uber Fx (Modular)"
 	default:
 		// fallback sederhana
 		return id
