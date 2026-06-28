@@ -1,22 +1,25 @@
-<img width="3168" height="1344" alt="Gemini_Generated_Image_t7f4pjt7f4pjt7f4" src="https://github.com/user-attachments/assets/df715bfd-09d6-4d2a-b19e-929b4489cc0f" />
+# Goscaff
 
-# goscaff
+<img width="3168" height="1344" alt="Goscaff Banner" src="https://github.com/user-attachments/assets/df715bfd-09d6-4d2a-b19e-929b4489cc0f" />
 
-**Instant Go project scaffolding CLI.**
-
-`goscaff` is a lightweight Go CLI tool that scaffolds clean, production-ready Go backend projects in seconds—without boilerplate fatigue or framework lock-in.
+<p align="center">
+  <strong>Instant Go project scaffolding CLI.</strong><br>
+  Generate production-ready Go backend projects in seconds with an interactive wizard or automation-friendly flags.
+</p>
 
 ---
 
-## Features
+## ✨ Features
 
-* ⚡ **Instant setup** — create a new Go project with one command
-* 🧱 **Presets** — `base` (minimal) and `full` (production-ready)
-* 🧩 **Flexible architecture** — no forced DI or framework coupling
-* 📦 **Go modules ready** — `go.mod` generated automatically
-* 🧰 **Git initialized** — repository ready out of the box
-* 🌱 **Environment files included** — `.env`, `.env.example`, `.env.local`
-* 🎨 **Clean CLI output** — readable, colored progress & next-steps
+* ⚡ **Interactive wizard** — generate projects through a simple step-by-step CLI
+* 🚀 **Multiple frameworks** — Gin and Fiber
+* 🗄️ **Database selection** — PostgreSQL and MySQL
+* 🏗️ **Architecture options** — Modular, Layered, and Full Setup
+* 🔌 **Optional Dependency Injection** — None, Uber Dig, or Uber Fx
+* 📦 **Go Modules ready** — automatically generates `go.mod`
+* 🔧 **Git initialized** — project is ready to use immediately
+* 🎨 **Clean CLI output** — colorful progress, configuration summary, and next steps
+* 🤖 **Automation friendly** — fully configurable using command-line flags
 
 ---
 
@@ -28,116 +31,201 @@
 go install github.com/nbintang/goscaff@latest
 ```
 
-Ensure `$GOPATH/bin` or `$HOME/go/bin` is in your `PATH`.
+Make sure your Go binary directory is available in your `PATH`.
+
+```bash
+export PATH=$PATH:$(go env GOPATH)/bin
+```
+
+Verify installation:
+
+```bash
+goscaff --help
+```
 
 ---
 
-## Usage
+## Quick Start
 
-### Create a new project (default: base preset)
+Create a new project:
 
 ```bash
 goscaff new myapp
 ```
 
-This will:
+The interactive wizard will guide you through:
 
-* Create a `myapp` directory
-* Scaffold the **base** project structure
-* Generate `go.mod`
+```
+? Select framework
+❯ Gin
+  Fiber
+
+? Select database
+❯ PostgreSQL
+  MySQL
+
+? Select architecture
+❯ Modular
+  Layered
+  Full Setup
+
+? Dependency Injection
+❯ None
+  Uber Dig
+  Uber Fx
+
+? Module path
+❯ myapp
+
+Configuration
+
+Project Name : myapp
+Module Path  : myapp
+Framework    : Gin
+Database     : PostgreSQL
+Architecture : Modular
+DI           : Uber Fx
+
+? Continue?
+```
+
+Then goscaff will automatically:
+
+* Create the project directory
+* Generate project files
+* Create `go.mod`
 * Run `go mod tidy`
-* Initialize a git repository
-* Print clear **next steps** to run the project
+* Initialize Git
+* Display the next steps
 
 ---
 
-### Specify module path (optional)
+## Non-Interactive Mode
+
+Perfect for automation or CI.
+
+Generate a Gin project using PostgreSQL, Modular architecture, and Uber Fx:
 
 ```bash
-goscaff new myapp --module github.com/username/myapp
+goscaff new myapp \
+  --framework gin \
+  --db postgres \
+  --architecture modular \
+  --di uber-fx
 ```
 
-If `--module` is omitted, the module name defaults to the project name.
-
----
-
-### Use full preset
+Specify a custom module path:
 
 ```bash
-goscaff new myapp --preset full
+goscaff new myapp \
+  --module github.com/username/myapp
 ```
 
-The `full` preset includes additional infrastructure and production-oriented defaults.
-
----
-
-### Choose database (full preset only)
+You can also specify a template directly:
 
 ```bash
-goscaff new myapp --preset full --db mysql
+goscaff new myapp \
+  --template gin-postgres-uber-fx-modular
 ```
-
-Supported databases:
-
-* `postgres` (default)
-* `mysql`
-
-> Database overlays are applied **only** for the `full` preset. The `base` preset stays minimal.
 
 ---
 
-## Example Project Structure
+## Available Options
 
-```text
-myapp/
-├── cmd/
-│   └── api/
-│   │   └── main.go
-│   └── migrate
-│   │   └── main.go
-│   └── ...
-│       
-├── internal/
-│   ├── auth/
-│   ├── apperr/
-│   ├── infra/
-│   │   ├── database/
-│   │   ├── cache/
-│   │   └── ...
-│   ├── http/
-│   └── ...
-│
-├── pkg/
-│   ├── env/
-│   ├── slice/
-│   └── ...
-├── .env
-├── .env.example
-├── .env.local
-├── go.mod
-└── README.md
+### Frameworks
+
+| Value   | Description     |
+| ------- | --------------- |
+| `gin`   | Gin Framework   |
+| `fiber` | Fiber Framework |
+
+---
+
+### Databases
+
+| Value      | Description |
+| ---------- | ----------- |
+| `postgres` | PostgreSQL  |
+| `mysql`    | MySQL       |
+
+---
+
+### Architectures
+
+| Value        | Description                             |
+| ------------ | --------------------------------------- |
+| `modular`    | Feature-based modular architecture      |
+| `layered`    | Traditional layered architecture        |
+| `full-setup` | Production-ready full project structure |
+
+---
+
+### Dependency Injection
+
+| Value      | Description     |
+| ---------- | --------------- |
+| `none`     | No DI container |
+| `uber-dig` | Uber Dig        |
+| `uber-fx`  | Uber Fx         |
+
+---
+
+## Command Reference
+
+```bash
+goscaff new [project-name]
+
+Flags:
+
+--module          Go module path
+--framework       gin | fiber
+--db              postgres | mysql
+--architecture    modular | layered | full-setup
+--di              none | uber-dig | uber-fx
+--template        Template ID
+```
+
+See all available options:
+
+```bash
+goscaff new --help
+```
+
+---
+
+## Example
+
+```bash
+goscaff new awesome-api \
+  --module github.com/acme/awesome-api \
+  --framework fiber \
+  --db postgres \
+  --architecture modular \
+  --di uber-fx
 ```
 
 ---
 
 ## Philosophy
 
-`goscaff` is designed with a few simple principles:
+goscaff follows a few simple principles:
 
-* **Minimal by default** — start clean, add complexity only when needed
-* **Fast feedback** — scaffolding should take seconds, not minutes
-* **Structure without lock-in** — you own the architecture decisions
+* **Simple by default** — generate projects without unnecessary complexity.
+* **Interactive first** — sensible defaults through an intuitive wizard.
+* **Flexible** — choose only the technologies you need.
+* **Automation friendly** — every interactive option has a corresponding CLI flag.
+* **Production-ready** — generated projects follow clean and maintainable structures.
 
 ---
 
 ## Contributing
 
-Contributions are welcome!
+Contributions are welcome.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Open a Pull Request.
 
 ---
 
