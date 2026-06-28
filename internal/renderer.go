@@ -21,7 +21,7 @@ type rendererImpl struct {
 	templateFS fs.FS
 }
 
-var scaffoldTemplateMarker = regexp.MustCompile(`\{\{\s*\.(PROJECT_NAME|MODULE_PATH|TEMPLATE)\b`)
+var scaffoldTemplateMarker = regexp.MustCompile(`\{\{\s*\.(PROJECT_NAME|MODULE_PATH|TEMPLATE|FRAMEWORK|DATABASE|ARCHITECTURE|DI)\b`)
 
 func NewRenderer() Renderer {
 	fsys, err := templateFS()
@@ -142,6 +142,10 @@ func renderTemplate(path string, content []byte, opts ScaffoldOptions) ([]byte, 
 		"PROJECT_NAME": opts.ProjectName,
 		"MODULE_PATH":  opts.ModulePath,
 		"TEMPLATE":     opts.Template,
+		"FRAMEWORK":    opts.Framework,
+		"DATABASE":     opts.Database,
+		"ARCHITECTURE": opts.Architecture,
+		"DI":           opts.DI,
 	}); err != nil {
 		return nil, fmt.Errorf("execute template %s: %w", path, err)
 	}

@@ -20,6 +20,10 @@ type Wizard struct{}
 func NewWizard() *Wizard { return &Wizard{} }
 
 func (w *Wizard) SelectOption(ctx context.Context, label string, items []Option, def string) (string, error) {
+	if len(items) == 0 {
+		return "", fmt.Errorf("no options available for %s", label)
+	}
+
 	start := 0
 	for i, it := range items {
 		if it.Value == def {
@@ -46,6 +50,22 @@ func (w *Wizard) SelectOption(ctx context.Context, label string, items []Option,
 		return "", err
 	}
 	return items[idx].Value, nil
+}
+
+func (w *Wizard) Confirm(ctx context.Context, label string, def bool) (bool, error) {
+	defValue := "no"
+	if def {
+		defValue = "yes"
+	}
+
+	value, err := w.SelectOption(ctx, label, []Option{
+		{Label: "Yes", Value: "yes"},
+		{Label: "No", Value: "no"},
+	}, defValue)
+	if err != nil {
+		return false, err
+	}
+	return value == "yes", nil
 }
 
 func (w *Wizard) Input(ctx context.Context, label, def string) (string, error) {

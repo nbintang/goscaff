@@ -9,9 +9,8 @@ import (
 )
 
 type Case struct {
-	Name   string
-	Preset string
-	DB     string
+	Name string
+	Args []string
 }
 
 func repoRoot(t *testing.T) string {
@@ -61,10 +60,11 @@ func runCmd(t *testing.T, dir, name string, args ...string) string {
 
 func Test_Scaffold_E2E(t *testing.T) {
 	cases := []Case{
-		{"base-postgres", "base", "postgres"},
-		{"base-mysql", "base", "mysql"},
-		{"full-postgres", "full", "postgres"},
-		{"full-mysql", "full", "mysql"},
+		{"base-postgres", []string{"--preset", "base", "--db", "postgres"}},
+		{"base-mysql", []string{"--preset", "base", "--db", "mysql"}},
+		{"full-postgres", []string{"--preset", "full", "--db", "postgres"}},
+		{"full-mysql", []string{"--preset", "full", "--db", "mysql"}},
+		{"gin-postgres-uber-fx", []string{"--framework", "gin", "--db", "postgres", "--architecture", "modular", "--di", "uber-fx"}},
 	}
 
 	root := repoRoot(t)
@@ -74,34 +74,29 @@ func Test_Scaffold_E2E(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 
-			workspace := t.TempDir()
+			workspace, err := os.MkdirTemp(root, ".goscaff-e2e-"+tc.Name+"-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(workspace)
 
 			// ✅ unik per subtest (biar gak tabrakan di repo root)
 			projectName := "myapp-" + tc.Name
-			projectSrc := filepath.Join(root, projectName)
 			projectDst := filepath.Join(workspace, projectName)
 
 			// safety: kalau ada sisa folder dari crash sebelumnya
-			_ = os.RemoveAll(projectSrc)
+			_ = os.RemoveAll(projectDst)
 
-			// 1) generate di repo root pakai RELATIVE name
-			runCmd(t, root, "go",
-				"run", ".", "new", projectName,
-				"--preset", tc.Preset,
-				"--db", tc.DB,
-			)
+			// 1) generate dari repo root ke workspace satu drive
+			args := append([]string{"run", ".", "new", projectDst}, tc.Args...)
+			runCmd(t, root, "go", args...)
 
 			// pastikan kebentuk
-			if _, err := os.Stat(projectSrc); err != nil {
-				t.Fatalf("generated project not found at %s: %v", projectSrc, err)
+			if _, err := os.Stat(projectDst); err != nil {
+				t.Fatalf("generated project not found at %s: %v", projectDst, err)
 			}
 
-			// 2) pindahkan ke workspace (unik juga)
-			if err := os.Rename(projectSrc, projectDst); err != nil {
-				t.Fatalf("failed to move project to temp dir: %v", err)
-			}
-
-			// 3) build
+			// 2) build
 			runCmd(t, projectDst, "go", "build", "./cmd/api")
 		})
 	}

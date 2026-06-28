@@ -27,15 +27,16 @@ var rootCmd = &cobra.Command{
 Goscaff is an instant Go scaffolding CLI.
 Use it to generate a production-ready Go backend boilerplate.
 
-Presets:
-  - base : minimal starter (core structure only)
-  - full : production-ready starter (default)
+Wizard:
+  - framework     : Gin or Fiber
+  - database      : PostgreSQL or MySQL
+  - architecture  : Modular, Layered, or Full Setup
+  - dependency DI : None, Uber Dig, or Uber Fx
 
 Quick start:
   goscaff new myapp
   goscaff new myapp --module github.com/you/myapp
-  goscaff new myapp --preset base
-  goscaff new myapp --preset full --db mysql --module github.com/you/myapp
+  goscaff new myapp --framework gin --db postgres --architecture modular --di uber-fx
 
 Tips:
   - Run "goscaff new --help" to see all flags and examples.
@@ -52,14 +53,14 @@ func Execute() {
 	defer stop()
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintln(os.Stderr, "Error: interactive prompt crashed. Try using flags --preset/--db/--module.")
+			fmt.Fprintln(os.Stderr, "Error: interactive prompt crashed. Try using flags --framework/--db/--architecture/--di/--module.")
 			os.Exit(1)
 		}
 	}()
 	rootCmd.SetContext(ctx)
 
 	if err := rootCmd.Execute(); err != nil {
- 
+
 		if errors.Is(err, context.Canceled) || errors.Is(err, promptui.ErrInterrupt) {
 			fmt.Fprintln(os.Stderr, "✋ Cancelled by user. Nothing was generated.")
 			return

@@ -12,16 +12,28 @@ import (
 )
 
 var (
-	flagModule   string
-	flagTemplate string
+	flagModule       string
+	flagTemplate     string
+	flagFramework    string
+	flagDatabase     string
+	flagArchitecture string
+	flagDI           string
+	flagPreset       string
 )
 
 func isInteractive(cmd *cobra.Command) bool {
 	if os.Getenv("GOSCAFF_NON_INTERACTIVE") == "1" {
 		return false
 	}
-	return !cmd.Flags().Changed("template") &&
-		!cmd.Flags().Changed("module")
+	return !cmd.Flags().Changed("template") && !hasSelectionFlags(cmd)
+}
+
+func hasSelectionFlags(cmd *cobra.Command) bool {
+	return cmd.Flags().Changed("framework") ||
+		cmd.Flags().Changed("db") ||
+		cmd.Flags().Changed("architecture") ||
+		cmd.Flags().Changed("di") ||
+		cmd.Flags().Changed("preset")
 }
 
 var newCmd = &cobra.Command{
@@ -31,30 +43,25 @@ var newCmd = &cobra.Command{
 
 This command will:
   1) Create a new directory using [project-name]
-  2) Render embedded templates based on preset (base|full)
+  2) Ask for framework, database, architecture, and dependency injection
   3) Run "go mod tidy"
   4) Initialize git repository (git init)
 
-Preset:
-  base - minimal template
-  full - complete template (default)
-
-Database:
-  postgres (default) or mysql
+Use the wizard for the recommended experience, or pass flags for automation.
 `,
 	Args: cobra.ExactArgs(1),
 	Example: `  
   # Quick start
   goscaff new myapp
 
-  # Full preset (default) with module path
+  # With module path
   goscaff new myapp --module github.com/you/myapp
 
-  # Base preset (minimal)
-  goscaff new myapp --preset base --module github.com/you/myapp
+  # Non-interactive Gin + PostgreSQL + Modular + Uber Fx
+  goscaff new myapp --framework gin --db postgres --architecture modular --di uber-fx
 
-  # Full preset + MySQL
-  goscaff new myapp --preset full --db mysql --module github.com/you/myapp
+  # Legacy preset flags remain supported
+  goscaff new myapp --preset full --db mysql
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		projectArg := args[0]
@@ -71,36 +78,33 @@ Database:
 
 		tpl := flagTemplate
 		modulePath := flagModule
+		var spec internal.TemplateSpec
 
-		if isInteractive(cmd) {
+		if tpl != "" {
+			var err error
+			spec, err = templateSpecFromID(tpl)
+			if err != nil {
+				return err
+			}
+		} else if isInteractive(cmd) {
 			w := internal.NewWizard()
-			ctx := cmd.Context()
-
-			templates, err := internal.ListTemplates()
+			cfg, ok, err := runNewWizard(cmd.Context(), w, projectName, modulePath, selectionFromFlags())
 			if err != nil {
 				return err
 			}
-			if len(templates) == 0 {
-				return fmt.Errorf("tidak ada template di embedded FS")
+			if !ok {
+				return nil
 			}
-
-			opts := make([]internal.Option, 0, len(templates))
-			for _, id := range templates {
-				opts = append(opts, internal.Option{
-					Label: internal.PrettyTemplateLabel(id),
-					Value: id,
-				})
-			}
-
-			tpl, err = w.SelectOption(ctx, "Template", opts, templates[0])
+			spec = cfg.Template
+			tpl = spec.ID
+			modulePath = cfg.ModulePath
+		} else {
+			var err error
+			spec, err = internal.ResolveTemplate(defaultSelection(selectionFromFlags()))
 			if err != nil {
 				return err
 			}
-
-			modulePath, err = w.Input(ctx, "Module path", projectName)
-			if err != nil {
-				return err
-			}
+			tpl = spec.ID
 		}
 
 		if tpl == "" {
@@ -112,10 +116,14 @@ Database:
 		}
 
 		opts := internal.ScaffoldOptions{
-			ProjectName: projectName,
-			ModulePath:  modulePath,
-			Template:    tpl,
-			OutDir:      outDir,
+			ProjectName:  projectName,
+			ModulePath:   modulePath,
+			Template:     tpl,
+			OutDir:       outDir,
+			Framework:    spec.Framework,
+			Database:     spec.Database,
+			Architecture: spec.Architecture,
+			DI:           spec.DI,
 		}
 
 		renderer := internal.NewRenderer()
@@ -135,9 +143,202 @@ Database:
 	SilenceErrors: true,
 }
 
+func selectionFromFlags() internal.TemplateSelection {
+	sel := internal.TemplateSelection{
+		Framework:    flagFramework,
+		Database:     flagDatabase,
+		Architecture: flagArchitecture,
+		DI:           flagDI,
+	}
+
+	preset := internal.NormalizeArchitecture(flagPreset)
+	switch preset {
+	case internal.ArchitectureModular:
+		if sel.Architecture == "" {
+			sel.Architecture = internal.ArchitectureModular
+		}
+		if sel.DI == "" {
+			sel.DI = internal.DINone
+		}
+	case internal.ArchitectureFullSetup:
+		if sel.Architecture == "" {
+			sel.Architecture = internal.ArchitectureFullSetup
+		}
+	case "":
+	default:
+		if flagPreset != "" {
+			sel.Architecture = preset
+		}
+	}
+
+	return sel
+}
+
+func defaultSelection(sel internal.TemplateSelection) internal.TemplateSelection {
+	if sel.Framework == "" {
+		sel.Framework = firstValue(internal.OptionsFor(sel, internal.TemplateFieldFramework))
+	}
+	sel.Framework = internal.NormalizeFramework(sel.Framework)
+
+	if sel.Database == "" {
+		sel.Database = firstValue(internal.OptionsFor(sel, internal.TemplateFieldDatabase))
+	}
+	sel.Database = internal.NormalizeDatabase(sel.Database)
+
+	if sel.Architecture == "" {
+		sel.Architecture = firstValue(internal.OptionsFor(sel, internal.TemplateFieldArchitecture))
+	}
+	sel.Architecture = internal.NormalizeArchitecture(sel.Architecture)
+
+	if sel.Architecture == internal.ArchitectureModular {
+		if sel.DI == "" {
+			sel.DI = firstValue(internal.OptionsFor(sel, internal.TemplateFieldDI))
+		}
+		sel.DI = internal.NormalizeDI(sel.DI)
+	} else if sel.DI != "" {
+		sel.DI = internal.NormalizeDI(sel.DI)
+	}
+
+	return sel
+}
+
+func runNewWizard(ctx context.Context, w *internal.Wizard, projectName, modulePath string, sel internal.TemplateSelection) (internal.WizardConfig, bool, error) {
+	var err error
+
+	sel.Framework, err = selectTemplateValue(ctx, w, "Select framework", internal.TemplateFieldFramework, sel, sel.Framework)
+	if err != nil {
+		return internal.WizardConfig{}, false, err
+	}
+
+	sel.Database, err = selectTemplateValue(ctx, w, "Select database", internal.TemplateFieldDatabase, sel, sel.Database)
+	if err != nil {
+		return internal.WizardConfig{}, false, err
+	}
+
+	sel.Architecture, err = selectTemplateValue(ctx, w, "Select architecture", internal.TemplateFieldArchitecture, sel, sel.Architecture)
+	if err != nil {
+		return internal.WizardConfig{}, false, err
+	}
+
+	if len(internal.OptionsFor(sel, internal.TemplateFieldDI)) > 0 {
+		sel.DI, err = selectTemplateValue(ctx, w, "Dependency Injection", internal.TemplateFieldDI, sel, sel.DI)
+		if err != nil {
+			return internal.WizardConfig{}, false, err
+		}
+	}
+
+	spec, err := internal.ResolveTemplate(sel)
+	if err != nil {
+		return internal.WizardConfig{}, false, err
+	}
+
+	if modulePath == "" {
+		modulePath, err = w.Input(ctx, "Module path", projectName)
+		if err != nil {
+			return internal.WizardConfig{}, false, err
+		}
+	}
+
+	cfg := internal.WizardConfig{
+		ProjectName: projectName,
+		ModulePath:  modulePath,
+		Template:    spec,
+	}
+	printConfiguration(cfg)
+
+	ok, err := w.Confirm(ctx, "Continue?", true)
+	if err != nil {
+		return internal.WizardConfig{}, false, err
+	}
+	return cfg, ok, nil
+}
+
+func selectTemplateValue(ctx context.Context, w *internal.Wizard, label, field string, sel internal.TemplateSelection, current string) (string, error) {
+	opts := internal.OptionsFor(sel, field)
+	if current != "" {
+		value := normalizeByField(field, current)
+		if !hasOption(opts, value) {
+			return "", fmt.Errorf("%s %q is not available for the current selection", field, current)
+		}
+		return value, nil
+	}
+
+	def := firstValue(opts)
+	return w.SelectOption(ctx, label, opts, def)
+}
+
+func normalizeByField(field, value string) string {
+	switch field {
+	case internal.TemplateFieldFramework:
+		return internal.NormalizeFramework(value)
+	case internal.TemplateFieldDatabase:
+		return internal.NormalizeDatabase(value)
+	case internal.TemplateFieldArchitecture:
+		return internal.NormalizeArchitecture(value)
+	case internal.TemplateFieldDI:
+		return internal.NormalizeDI(value)
+	default:
+		return value
+	}
+}
+
+func firstValue(opts []internal.Option) string {
+	if len(opts) == 0 {
+		return ""
+	}
+	return opts[0].Value
+}
+
+func hasOption(opts []internal.Option, value string) bool {
+	for _, opt := range opts {
+		if opt.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+func templateSpecFromID(id string) (internal.TemplateSpec, error) {
+	spec, err := internal.TemplateByID(id)
+	if err == nil {
+		return spec, nil
+	}
+
+	templates, listErr := internal.ListTemplates()
+	if listErr != nil {
+		return internal.TemplateSpec{}, listErr
+	}
+	for _, tpl := range templates {
+		if tpl == id {
+			return internal.TemplateSpec{ID: id}, nil
+		}
+	}
+	return internal.TemplateSpec{}, err
+}
+
+func printConfiguration(cfg internal.WizardConfig) {
+	fmt.Println()
+	fmt.Println("Configuration")
+	fmt.Printf("%-13s: %s\n", "Project Name", cfg.ProjectName)
+	fmt.Printf("%-13s: %s\n", "Module Path", cfg.ModulePath)
+	fmt.Printf("%-13s: %s\n", "Framework", internal.PrettyChoiceLabel(cfg.Template.Framework))
+	fmt.Printf("%-13s: %s\n", "Database", internal.PrettyChoiceLabel(cfg.Template.Database))
+	fmt.Printf("%-13s: %s\n", "Architecture", internal.PrettyChoiceLabel(cfg.Template.Architecture))
+	if cfg.Template.DI != "" {
+		fmt.Printf("%-13s: %s\n", "DI", internal.PrettyChoiceLabel(cfg.Template.DI))
+	}
+	fmt.Println()
+}
+
 func init() {
 	rootCmd.AddCommand(newCmd)
 
 	newCmd.Flags().StringVar(&flagModule, "module", "", "Go module path (default: project-name)")
 	newCmd.Flags().StringVar(&flagTemplate, "template", "", "Template ID to use (skips interactive template selection)")
+	newCmd.Flags().StringVar(&flagFramework, "framework", "", "Framework to use (gin, fiber)")
+	newCmd.Flags().StringVar(&flagDatabase, "db", "", "Database to use (postgres, mysql)")
+	newCmd.Flags().StringVar(&flagArchitecture, "architecture", "", "Architecture to use (modular, layered, full-setup)")
+	newCmd.Flags().StringVar(&flagDI, "di", "", "Dependency injection to use (none, uber-dig, uber-fx)")
+	newCmd.Flags().StringVar(&flagPreset, "preset", "", "Legacy preset (base, full)")
+	_ = newCmd.Flags().MarkHidden("preset")
 }
