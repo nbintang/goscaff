@@ -16,7 +16,7 @@ func TestResolveTemplate(t *testing.T) {
 				Architecture: ArchitectureModular,
 				DI:           DIUberFx,
 			},
-			want: "gin-postgres-uber-fx-[modular]",
+			want: "gin-postgres-uber-fx-modular",
 		},
 		{
 			name: "gin mysql layered",
@@ -25,7 +25,7 @@ func TestResolveTemplate(t *testing.T) {
 				Database:     DatabaseMySQL,
 				Architecture: ArchitectureLayered,
 			},
-			want: "gin-mysql-[layered]",
+			want: "gin-mysql-layered",
 		},
 		{
 			name: "fiber postgres full setup",
